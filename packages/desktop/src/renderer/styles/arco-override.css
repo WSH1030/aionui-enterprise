@@ -81,8 +81,8 @@ body[arco-theme='dark'] {
   --aion-overlay-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
-/* Arco's arco.css puts 'Inter' first in font-family, which causes very thin
-   text on systems that have Inter installed. Override to use system fonts. */
+/* Keep the app typography close to Codex: Inter first when it is installed,
+   with platform and CJK fallbacks for machines that do not have it. */
 html,
 body {
   /* Global ("app") region font. --app-font-family is set by applyFontFamilies
@@ -91,6 +91,7 @@ body {
      pick no font of their own inherit this global font. */
   font-family: var(
     --app-font-family,
+    'Inter',
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',

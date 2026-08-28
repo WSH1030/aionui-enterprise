@@ -17,9 +17,9 @@
 
   /* Background Colors - Light Mode */
   --bg-base: #ffffff; /* bg-0 - 主背景 */
-  --bg-1: #f9fafb; /* 次级背景 */
-  --bg-2: #f2f3f5; /* 三级背景 */
-  --bg-3: #e5e6eb; /* 边框/分隔 */
+  --bg-1: #fcfcfd; /* 次级背景 */
+  --bg-2: #f7f8fa; /* 三级背景 */
+  --bg-3: #e8ebef; /* 边框/分隔 */
   --bg-4: #c9cdd4;
   --bg-5: #adb4c1;
   --bg-6: #86909c; /* 禁用/次要文字 */
@@ -28,13 +28,13 @@
   --bg-10: #0c0e12;
 
   /* Interactive State Colors - Light Mode */
-  --bg-hover: #f3f4f6; /* 悬停背景 - 在 bg-1 和 bg-2 之间 */
-  --bg-active: #e5e6eb; /* 激活/按下背景 */
+  --bg-hover: #f8f9fb; /* 悬停背景 - 在 bg-1 和 bg-2 之间 */
+  --bg-active: #eef1f5; /* 激活/按下背景 */
 
   /* Text Colors - Light Mode */
-  --text-primary: #000000; /* 主要文字 */
-  --color-text-1: #000000; /* Arco 主文字 — 与 --text-primary 对齐 */
-  --text-secondary: #454d5f; /* 次要文字 — 加深至 ~7.5:1 对比度 */
+  --text-primary: #202124; /* 主要文字 */
+  --color-text-1: #202124; /* Arco 主文字 — 与 --text-primary 对齐 */
+  --text-secondary: #5f6368; /* 次要文字 — 清晰的灰色文字 */
   --text-disabled: #c9cdd4; /* 禁用文字 */
 
   /* Semantic Colors - Light Mode */

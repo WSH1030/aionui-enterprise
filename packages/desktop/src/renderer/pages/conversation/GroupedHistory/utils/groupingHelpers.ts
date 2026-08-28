@@ -5,12 +5,57 @@
  */
 
 import type { TChatConversation } from '@/common/config/storage';
+import type { SidebarResponse } from '@/common/types/sidebar';
 import { getActivityTime } from '@/renderer/utils/chat/timeline';
 import { getWorkspaceDisplayName } from '@/renderer/utils/workspace/workspace';
 import { getWorkspaceUpdateTime } from '@/renderer/utils/workspace/workspaceHistory';
 
 import type { GroupedHistoryResult, TimelineItem, TimelineSection } from '../types';
 import { getConversationSortOrder } from './sortOrderHelpers';
+
+export type ProjectSidebarEntry = {
+  workspace: string;
+  displayName: string;
+  conversations: TChatConversation[];
+};
+
+export type BackendProjectSidebarEntry = {
+  key: string;
+  projectId?: string;
+  workspace?: string;
+  displayName: string;
+  conversations: TChatConversation[];
+  hasMore: boolean;
+};
+
+export type BackendSidebarView = {
+  projects: BackendProjectSidebarEntry[];
+  pinnedConversations: TChatConversation[];
+  recentConversations: TChatConversation[];
+};
+
+export type ProjectSidebarRow =
+  | { kind: 'project'; project: BackendProjectSidebarEntry }
+  | { kind: 'conversation'; projectKey: string; conversation: TChatConversation };
+
+const workspaceUriToPath = (workspace: string | null | undefined): string | undefined => {
+  if (!workspace) return undefined;
+  if (!workspace.startsWith('file://')) return workspace;
+
+  try {
+    const url = new URL(workspace);
+    const pathname = decodeURIComponent(url.pathname);
+    if (url.hostname && url.hostname !== 'localhost') {
+      return `\\\\${url.hostname}${pathname.replaceAll('/', '\\')}`;
+    }
+    if (/^\/[A-Za-z]:\//.test(pathname)) {
+      return pathname.slice(1).replaceAll('/', '\\');
+    }
+    return pathname;
+  } catch {
+    return workspace;
+  }
+};
 
 export const isConversationPinned = (conversation: TChatConversation): boolean => {
   const extra = conversation.extra as { pinned?: boolean } | undefined;
@@ -86,6 +131,164 @@ export const groupConversationsByWorkspace = (
       items,
     },
   ];
+};
+
+/**
+ * Build the project list shown above recent conversations.
+ *
+ * A folder selected from the sidebar can exist before the first conversation
+ * is created, so recent workspace paths are merged with workspaces discovered
+ * from conversation history. Recent paths keep their order and existing
+ * conversation groups are attached to them without duplication.
+ */
+export const buildProjectSidebarEntries = (
+  timelineSections: TimelineSection[],
+  recentWorkspaces: string[],
+  t: (key: string) => string
+): ProjectSidebarEntry[] => {
+  const groupsByWorkspace = new Map<string, ProjectSidebarEntry>();
+
+  for (const section of timelineSections) {
+    for (const item of section.items) {
+      if (item.type !== 'workspace' || !item.workspaceGroup) continue;
+
+      const { workspace, display_name, conversations } = item.workspaceGroup;
+      groupsByWorkspace.set(workspace, {
+        workspace,
+        displayName: display_name,
+        conversations,
+      });
+    }
+  }
+
+  const entries: ProjectSidebarEntry[] = [];
+  const seen = new Set<string>();
+  const addEntry = (workspace: string, fallbackDisplayName?: string) => {
+    if (!workspace || seen.has(workspace)) return;
+
+    seen.add(workspace);
+    const existing = groupsByWorkspace.get(workspace);
+    entries.push(
+      existing ?? {
+        workspace,
+        displayName: fallbackDisplayName ?? getWorkspaceDisplayName(workspace, false, t),
+        conversations: [],
+      }
+    );
+  };
+
+  recentWorkspaces.forEach((workspace) => addEntry(workspace));
+  groupsByWorkspace.forEach((group) => addEntry(group.workspace));
+
+  return entries;
+};
+
+/** Return all non-pinned conversations in most-recent-first order. */
+export const buildRecentConversationList = (
+  conversations: TChatConversation[],
+  pinnedConversations: TChatConversation[]
+): TChatConversation[] => {
+  const pinnedIds = new Set(pinnedConversations.map((conversation) => conversation.id));
+  return conversations
+    .filter((conversation) => !pinnedIds.has(conversation.id))
+    .toSorted((a, b) => {
+      const activityDifference = getActivityTime(b) - getActivityTime(a);
+      return activityDifference !== 0 ? activityDifference : a.id.localeCompare(b.id);
+    });
+};
+
+/**
+ * Convert the backend sidebar read model into the three renderer sections.
+ * Group classification and user scoping are intentionally left to AionCore;
+ * this helper only adapts the already-ordered response for the sidebar UI.
+ */
+export const buildBackendSidebarView = (response: SidebarResponse | undefined): BackendSidebarView => {
+  const projects: BackendProjectSidebarEntry[] = [];
+  const pinnedConversations: TChatConversation[] = [];
+  const recentConversations: TChatConversation[] = [];
+
+  for (const group of response?.groups ?? []) {
+    const conversations = group.items
+      .filter((item): item is Extract<(typeof group.items)[number], { type: 'conversation' }> => {
+        return item.type === 'conversation';
+      })
+      .map((item) => item.conversation);
+
+    switch (group.scope.type) {
+      case 'pinned':
+        pinnedConversations.push(...conversations);
+        break;
+      case 'project':
+        projects.push({
+          key: `project:${group.scope.project_id}`,
+          projectId: group.scope.project_id,
+          workspace: workspaceUriToPath(group.scope.workspace),
+          displayName: group.scope.name,
+          conversations,
+          hasMore: group.has_more,
+        });
+        break;
+      case 'dir':
+        projects.push({
+          key: `dir:${group.scope.key}`,
+          workspace: group.scope.path,
+          displayName: group.scope.name,
+          conversations,
+          hasMore: group.has_more,
+        });
+        break;
+      case 'chats':
+        recentConversations.push(...conversations);
+        break;
+    }
+  }
+
+  return { projects, pinnedConversations, recentConversations };
+};
+
+/**
+ * Keep a folder chosen in the UI visible while its first conversation is being
+ * created. Once AionCore returns the real project group, the local shortcut is
+ * deduplicated by workspace path.
+ */
+export const mergeBackendProjectsWithRecentWorkspaces = (
+  projects: BackendProjectSidebarEntry[],
+  recentWorkspaces: string[],
+  t: (key: string) => string
+): BackendProjectSidebarEntry[] => {
+  const result = [...projects];
+  const backendWorkspaces = new Set(projects.map((project) => project.workspace).filter(Boolean));
+
+  for (const workspace of recentWorkspaces) {
+    if (!workspace || backendWorkspaces.has(workspace)) continue;
+
+    result.push({
+      key: `local:${workspace}`,
+      workspace,
+      displayName: getWorkspaceDisplayName(workspace, false, t),
+      conversations: [],
+      hasMore: false,
+    });
+  }
+
+  return result;
+};
+
+/** Build the visible parent/child rows for the project tree. */
+export const buildProjectSidebarRows = (
+  projects: BackendProjectSidebarEntry[],
+  expandedProjectKeys: ReadonlySet<string>
+): ProjectSidebarRow[] => {
+  const rows: ProjectSidebarRow[] = [];
+  for (const project of projects) {
+    rows.push({ kind: 'project', project });
+    if (!expandedProjectKeys.has(project.key)) continue;
+
+    for (const conversation of project.conversations) {
+      rows.push({ kind: 'conversation', projectKey: project.key, conversation });
+    }
+  }
+  return rows;
 };
 
 /** Check whether a conversation belongs to a team (should be hidden from sidebar). */

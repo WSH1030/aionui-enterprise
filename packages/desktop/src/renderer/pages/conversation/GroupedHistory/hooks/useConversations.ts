@@ -31,7 +31,7 @@ const readCollapsedSections = (): Set<string> => {
 
 // Where an active conversation lives, so we can expand the right containers
 // before scrolling it into view.
-type ConversationLocation = { section: 'pinned' | 'projects' | 'conversations'; workspace?: string };
+type ConversationLocation = { section: 'pinned' | 'recents' };
 
 const locateConversation = (
   id: string,
@@ -43,10 +43,10 @@ const locateConversation = (
     for (const item of section.items) {
       if (item.type === 'workspace' && item.workspaceGroup) {
         if (item.workspaceGroup.conversations.some((c) => c.id === id)) {
-          return { section: 'projects', workspace: item.workspaceGroup.workspace };
+          return { section: 'recents' };
         }
       } else if (item.type === 'conversation' && item.conversation?.id === id) {
-        return { section: 'conversations' };
+        return { section: 'recents' };
       }
     }
   }
@@ -118,12 +118,6 @@ export const useConversations = () => {
       next.delete(location.section);
       return next;
     });
-    // Expand the containing project folder if collapsed.
-    if (location.workspace) {
-      const workspace = location.workspace;
-      setExpandedWorkspaces((prev) => (prev.includes(workspace) ? prev : [...prev, workspace]));
-    }
-
     let cancelled = false;
     let outerRafId: number;
     let innerRafId: number;
