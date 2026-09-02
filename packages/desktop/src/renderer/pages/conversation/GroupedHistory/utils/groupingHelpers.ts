@@ -34,9 +34,10 @@ export type BackendSidebarView = {
   recentConversations: TChatConversation[];
 };
 
-export type ProjectSidebarRow =
-  | { kind: 'project'; project: BackendProjectSidebarEntry }
-  | { kind: 'conversation'; projectKey: string; conversation: TChatConversation };
+export type ProjectSidebarRow = {
+  project: BackendProjectSidebarEntry;
+  conversations: TChatConversation[];
+};
 
 const workspaceUriToPath = (workspace: string | null | undefined): string | undefined => {
   if (!workspace) return undefined;
@@ -198,6 +199,51 @@ export const buildRecentConversationList = (
 };
 
 /**
+ * Build the global Recent view from global conversations only. When AionCore
+ * returns a sidebar response, its `chats` group is the source of truth for
+ * Recent; project groups must never be folded back into this list.
+ */
+export const buildGlobalRecentConversationList = (
+  conversations: TChatConversation[],
+  pinnedConversations: TChatConversation[],
+  sidebarResponse?: SidebarResponse
+): TChatConversation[] => {
+  const conversationsById = new Map<string, TChatConversation>();
+  const sidebarPinnedConversations: TChatConversation[] = [];
+
+  const addConversation = (candidate: TChatConversation, fromChatsGroup = false) => {
+    if (!fromChatsGroup && (candidate.project_id || candidate.extra?.custom_workspace === true)) return;
+    const existing = conversationsById.get(candidate.id);
+    if (!existing || getActivityTime(candidate) > getActivityTime(existing)) {
+      conversationsById.set(candidate.id, candidate);
+    }
+  };
+
+  if (sidebarResponse) {
+    for (const group of sidebarResponse.groups) {
+      for (const item of group.items) {
+        if (item.type !== 'conversation') continue;
+        if (group.scope.type === 'pinned') {
+          sidebarPinnedConversations.push(item.conversation);
+        } else if (group.scope.type === 'chats') {
+          // The backend group is authoritative. Some AionCore versions still
+          // include an internal project_id on conversations classified as
+          // standalone chats, so do not reclassify them from row fields here.
+          addConversation(item.conversation, true);
+        }
+      }
+    }
+  } else {
+    conversations.forEach((conversation) => addConversation(conversation));
+  }
+
+  return buildRecentConversationList(
+    [...conversationsById.values()],
+    [...pinnedConversations, ...sidebarPinnedConversations]
+  );
+};
+
+/**
  * Convert the backend sidebar read model into the three renderer sections.
  * Group classification and user scoping are intentionally left to AionCore;
  * this helper only adapts the already-ordered response for the sidebar UI.
@@ -278,18 +324,11 @@ export const mergeBackendProjectsWithRecentWorkspaces = (
 export const buildProjectSidebarRows = (
   projects: BackendProjectSidebarEntry[],
   expandedProjectKeys: ReadonlySet<string>
-): ProjectSidebarRow[] => {
-  const rows: ProjectSidebarRow[] = [];
-  for (const project of projects) {
-    rows.push({ kind: 'project', project });
-    if (!expandedProjectKeys.has(project.key)) continue;
-
-    for (const conversation of project.conversations) {
-      rows.push({ kind: 'conversation', projectKey: project.key, conversation });
-    }
-  }
-  return rows;
-};
+): ProjectSidebarRow[] =>
+  projects.map((project) => ({
+    project,
+    conversations: expandedProjectKeys.has(project.key) ? project.conversations : [],
+  }));
 
 /** Check whether a conversation belongs to a team (should be hidden from sidebar). */
 const isTeamConversation = (conversation: TChatConversation): boolean => {

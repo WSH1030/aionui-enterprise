@@ -10,7 +10,7 @@ import useSWR from 'swr';
 import type { TChatConversation } from '@/common/config/storage';
 import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
 import { resolveConversationBackend } from '@/renderer/pages/conversation/utils/conversationAssistantIdentity';
-import { resolveAgentAvatar, useAgentLogos } from '@renderer/utils/model/agentLogo';
+import { resolveAgentAvatar, resolveAgentDisplayName, useAgentLogos } from '@renderer/utils/model/agentLogo';
 import { usePresetAssistantInfo } from '@renderer/hooks/agent/usePresetAssistantInfo';
 import { Robot } from '@icon-park/react';
 
@@ -60,12 +60,15 @@ const SingleChatEmptyState: React.FC<Props> = ({ conversation_id, assistant_name
   if (!conversation) return null;
 
   const assistantBackend = resolveConversationBackend(conversation, assistant_backend || presetInfo?.backend) || 'acp';
-  const assistantName = resolveAssistantName(
-    conversation,
-    presetInfo?.name ?? null,
-    assistant_name,
-    t('common.aiAssistant', { defaultValue: 'AI Assistant' })
-  );
+  const assistantName = resolveAgentDisplayName({
+    backend: assistantBackend,
+    agentName: resolveAssistantName(
+      conversation,
+      presetInfo?.name ?? null,
+      assistant_name,
+      t('common.aiAssistant', { defaultValue: 'AI Assistant' })
+    ),
+  });
   const agentAvatar = resolveAgentAvatar(logos, { icon, backend: assistantBackend });
 
   const renderAvatar = () => {

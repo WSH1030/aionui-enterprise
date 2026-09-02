@@ -38,6 +38,71 @@
   border-inline-end: 1px solid var(--border-base);
 }
 
+.layout-sider-primary--closed {
+  pointer-events: none;
+  border-inline-end-color: transparent !important;
+}
+
+/* Shared transition for right-side layout columns. The column stays mounted;
+   only its layout dimensions change, so the center workspace reflows in the
+   same animation instead of appearing after a delayed jump. */
+.layout-panel-column {
+  box-sizing: border-box;
+  transition:
+    width 200ms cubic-bezier(0.34, 0.69, 0.1, 1),
+    flex-basis 200ms cubic-bezier(0.34, 0.69, 0.1, 1),
+    min-width 200ms cubic-bezier(0.34, 0.69, 0.1, 1),
+    border-color 200ms cubic-bezier(0.34, 0.69, 0.1, 1);
+}
+
+.layout-panel-column--closed {
+  pointer-events: none;
+  border-inline-start-color: transparent !important;
+}
+
+/* The desktop workspace panel needs its divider on the chat-facing edge.
+   Keep this scoped to the right panel so the left sidebar transition is
+   unaffected, and leave the mobile overlay's existing border untouched. */
+.chat-layout-right-sider.layout-panel-column {
+  border-inline-start: 1px solid var(--border-base) !important;
+  border-inline-end: 0 !important;
+}
+
+.chat-layout-right-sider.layout-panel-column.layout-panel-column--closed {
+  border-inline-start-color: transparent !important;
+}
+
+/* The project explorer is hosted by Layout, not ChatLayout. Keep its divider
+   independent from the shared resize handle and from the conversation sider. */
+.project-panel-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: 0;
+  z-index: 25;
+  display: block;
+  width: 1px;
+  min-height: 100%;
+  background-color: var(--border-base);
+  pointer-events: none;
+}
+
+[data-explorer-column].layout-panel-column--closed .project-panel-divider {
+  visibility: hidden;
+}
+
+[data-explorer-column] .project-panel-resize-line {
+  opacity: 0 !important;
+}
+
+[data-explorer-column]:hover .project-panel-resize-line,
+[data-explorer-column]:focus-within .project-panel-resize-line,
+[data-explorer-column]:active .project-panel-resize-line {
+  width: 1px;
+  background-color: var(--border-base);
+  opacity: 1 !important;
+}
+
 /* Arco Layout inner container needs flex layout so Header + Content + Footer
    stack vertically and Content fills the remaining space (avoids a fixed
    calc() that breaks when header height changes). */
@@ -59,7 +124,31 @@
   height: auto !important;
 }
 
-.layout-sider.collapsed .arco-layout-sider-children,
+.layout-sider-viewport {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.layout-sider-surface {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.layout-sider-surface--content-collapsed .collapsed-hidden {
+  display: none;
+}
+
+.layout-sider-surface--content-collapsed .\!collapsed-hidden {
+  display: none !important;
+}
+
+.layout-sider.layout-sider--collapsed .arco-layout-sider-children,
 .layout-sider.arco-layout-sider-collapsed .arco-layout-sider-children {
   overflow-x: hidden;
 }
@@ -146,6 +235,10 @@
   .settings-sider__item-label,
   .chat-history__placeholder,
   .chat-history__section {
+    transition: none;
+  }
+
+  .layout-panel-column {
     transition: none;
   }
 }

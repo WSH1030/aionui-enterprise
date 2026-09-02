@@ -48,6 +48,7 @@ import { type ChatFileRef, isChatFileRef, uploadFileRef } from '@/common/types/c
 import { localSelectionItems, mergeFileSelectionItems } from '@/renderer/utils/file/fileSelection';
 import { collectChatFileRefs, splitChatFileRefs } from '@/renderer/utils/file/messageFiles';
 import type { AgentModeOption } from '@/renderer/utils/model/agentTypes';
+import { resolveAgentDisplayName } from '@/renderer/utils/model/agentLogo';
 import { Button, Message, Tag } from '@arco-design/web-react';
 import { Brain, Lightning, MagicHat, Shield } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -124,6 +125,7 @@ const AionrsSendBox: React.FC<{
   teamSendMessage?: (payload: { input: string; files: ChatFileRef[] }) => Promise<void>;
   teamRuntime?: TeamSendBoxRuntime;
 }> = ({ conversation_id, modelSelection, session_mode, agent_name, teamSendMessage, teamRuntime }) => {
+  const displayAgentName = resolveAgentDisplayName({ backend: 'aionrs', agentName: agent_name });
   const [dynamicModes, setDynamicModes] = useState<AgentModeOption[]>([]);
   const [currentMode, setCurrentMode] = useState<string | undefined>(session_mode);
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
@@ -782,7 +784,7 @@ const AionrsSendBox: React.FC<{
         placeholder={
           current_model?.use_model
             ? t('acp.sendbox.placeholder', {
-                backend: agent_name || 'AionCLI',
+                backend: displayAgentName,
                 defaultValue: `Send message to {{backend}}...`,
               })
             : t('conversation.chat.noModelSelected')

@@ -46,6 +46,7 @@ vi.mock('@/common', () => ({
 
 // Trim Layout's collaborators to keep this a focused brand-behaviour test.
 vi.mock('@/common/config/constants', () => ({
+  APP_NAME: 'AionUi',
   get TEAM_MODE_ENABLED() {
     return featureMocks.teamModeEnabled;
   },
@@ -181,10 +182,41 @@ describe('Layout sider brand Home button', () => {
     expect(sider).not.toHaveClass('collapsed');
 
     act(() => shortcutMocks.params?.toggleSider());
-    expect(sider).toHaveClass('collapsed');
+    expect(sider).toHaveClass('layout-sider--collapsed');
+    expect(sider).not.toHaveClass('collapsed');
 
     act(() => shortcutMocks.params?.toggleSider());
-    expect(sider).not.toHaveClass('collapsed');
+    expect(sider).not.toHaveClass('layout-sider--collapsed');
+  });
+
+  it('keeps the left sider surface stable while only the desktop slot collapses', () => {
+    currentPathname = '/conversation/xyz';
+    const { container } = renderLayout();
+    const sider = container.querySelector('.layout-sider') as HTMLElement;
+    const surface = container.querySelector('.layout-sider-surface') as HTMLElement;
+
+    expect(sider).not.toHaveClass('arco-layout-sider');
+    expect(container.querySelector('.arco-layout-has-sider')).toBeTruthy();
+    expect(sider.style.flexGrow).toBe('0');
+    expect(sider.style.flexShrink).toBe('0');
+    expect(surface.style.flex).toBe('0 0 auto');
+    expect(surface.style.width).toMatch(/^\d+px$/);
+    expect(surface.style.minWidth).toBe(surface.style.width);
+    expect(surface).not.toHaveClass('layout-sider-surface--content-collapsed');
+
+    act(() => shortcutMocks.params?.toggleSider());
+
+    expect(sider).toHaveClass('layout-sider--collapsed');
+    expect(sider).toHaveClass('layout-panel-column');
+    expect(sider).toHaveClass('layout-sider-primary--closed');
+    expect(sider.style.width).toBe('0px');
+    expect(sider.style.flexBasis).toBe('0px');
+    expect(sider.style.minWidth).toBe('0px');
+    expect(sider.style.flexGrow).toBe('0');
+    expect(sider.style.flexShrink).toBe('0');
+    expect(surface).not.toHaveClass('layout-sider-surface--content-collapsed');
+    expect(surface.style.width).toMatch(/^\d+px$/);
+    expect(surface.style.minWidth).toBe(surface.style.width);
   });
 
   it('keeps the common shortcut owner mounted on team routes', () => {

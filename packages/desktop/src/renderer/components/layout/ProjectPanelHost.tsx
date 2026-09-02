@@ -30,6 +30,7 @@ import React, { useRef } from 'react';
 
 import { ExplorerContainer } from '@/renderer/pages/conversation/explorer/ExplorerContainer';
 import { useCurrentProject } from '@/renderer/pages/conversation/explorer/currentProjectStore';
+import { MIN_WORKSPACE_PANEL_PX } from '@/renderer/pages/conversation/utils/layoutCalc';
 
 export type ProjectPanelHostProps = {
   /** Rendered width in px (clamped by Layout against the chat+preview reserve). */
@@ -54,13 +55,17 @@ export const ProjectPanelHost: React.FC<ProjectPanelHostProps> = ({ widthPx, col
       data-explorer-column
       data-mount-id={mountIdRef.current}
       data-collapsed={collapsed ? 'true' : 'false'}
-      className='!bg-1 h-full flex-shrink-0 overflow-hidden relative'
+      className={`!bg-1 h-full flex-shrink-0 overflow-hidden relative layout-panel-column${
+        collapsed ? ' layout-panel-column--closed' : ''
+      }`}
       style={{
         width: collapsed ? '0px' : `${widthPx}px`,
-        borderLeft: collapsed ? 'none' : '1px solid var(--bg-3)',
+        flexBasis: collapsed ? '0px' : `${widthPx}px`,
+        minWidth: collapsed ? '0px' : `${MIN_WORKSPACE_PANEL_PX}px`,
       }}
     >
-      {!collapsed && dragHandle}
+      <span aria-hidden='true' className='project-panel-divider' />
+      {dragHandle}
       {/* Hosted project component (this round: Explorer). Seam = projectId only. */}
       <ExplorerContainer projectId={projectId} />
     </div>

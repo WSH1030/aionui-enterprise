@@ -19,6 +19,8 @@ const { useAgentLogosMock } = vi.hoisted(() => ({
 
 vi.mock('@/renderer/utils/model/agentLogo', () => ({
   useAgentLogos: (...args: unknown[]) => useAgentLogosMock(...args),
+  resolveAgentDisplayName: ({ backend, agentName }: { backend?: string; agentName?: string }) =>
+    backend === 'aionrs' || agentName?.toLowerCase() === 'aion cli' ? 'Rd CLI' : agentName || backend || 'Agent',
   resolveAgentLogo: (_logos: unknown, opts: { backend?: string | null }) =>
     opts.backend ? `http://127.0.0.1:1/api/assets/logos/ai-major/${opts.backend}.svg` : null,
 }));
@@ -57,6 +59,18 @@ describe('AgentLogoIcon', () => {
     expect(img).not.toBeNull();
     expect(img?.getAttribute('alt')).toBe('openai logo');
     expect(img?.getAttribute('src')).toContain('openai.svg');
+  });
+
+  it('uses the Rd Worker brand logo and label for the built-in Aion CLI agent', () => {
+    useAgentLogosMock.mockReturnValue({
+      aionrs: 'http://127.0.0.1:1/api/assets/logos/ai-major/aionrs.svg',
+    });
+
+    const { container } = render(<AgentLogoIcon backend='aionrs' agent_name='Aion CLI' />);
+
+    const img = container.querySelector('img');
+    expect(img?.getAttribute('alt')).toBe('Rd CLI logo');
+    expect(img?.getAttribute('src')).toContain('app.png');
   });
 
   it('renders emoji when agentLogoIsEmoji is set', () => {

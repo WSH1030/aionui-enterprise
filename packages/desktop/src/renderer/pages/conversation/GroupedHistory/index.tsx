@@ -26,6 +26,7 @@ import {
   getRecentWorkspaces,
 } from '@/renderer/components/workspace/recentWorkspaces';
 import ConversationRow from './ConversationRow';
+import ProjectSidebarToggle from './ProjectSidebarToggle';
 import SortableConversationRow from './SortableConversationRow';
 import { useBatchSelection } from './hooks/useBatchSelection';
 import { useConversationActions } from './hooks/useConversationActions';
@@ -35,9 +36,9 @@ import type { ConversationRowProps, WorkspaceGroupedHistoryProps } from './types
 import { addEventListener } from '@/renderer/utils/emitter';
 import {
   buildBackendSidebarView,
+  buildGlobalRecentConversationList,
   buildProjectSidebarEntries,
   buildProjectSidebarRows,
-  buildRecentConversationList,
   mergeBackendProjectsWithRecentWorkspaces,
 } from './utils/groupingHelpers';
 
@@ -55,6 +56,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
   const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>(() => getRecentWorkspaces(DEFAULT_RECENT_WS_KEY));
   const [sidebarResponse, setSidebarResponse] = useState<SidebarResponse>();
   const { getJobStatus, markAsRead, setActiveConversation } = useCronJobsMap();
+  const backendProjects = useMemo(() => buildBackendSidebarView(sidebarResponse).projects, [sidebarResponse]);
 
   const {
     conversations,
@@ -69,7 +71,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
     handleToggleWorkspace,
     collapsedSections,
     toggleSection,
-  } = useConversations();
+  } = useConversations(backendProjects);
 
   const refreshSidebar = useCallback(async () => {
     try {
@@ -92,7 +94,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
       const isCollapsed = collapsedSections.has(sectionKey);
       return (
         <div
-          className='group/label sider-section-label flex items-center px-12px h-28px select-none sticky top-0 z-10 mt-8px cursor-pointer'
+          className='group/label sider-section-label flex items-center px-10px h-28px select-none sticky top-0 z-10 mt-8px cursor-pointer'
           onClick={() => toggleSection(sectionKey)}
         >
           <span className='text-14px text-t-tertiary sider-section-title group-hover/label:text-t-primary transition-colors font-[500] leading-none'>
@@ -280,16 +282,23 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
     }));
   }, [recentWorkspaces, sidebarResponse, t, timelineSections]);
 
+  const expandedProjectKeys = useMemo(() => {
+    const keys = new Set(expandedWorkspaces);
+    projectGroups.forEach((project) => {
+      if (project.workspace && expandedWorkspaces.includes(project.workspace)) {
+        keys.add(project.key);
+      }
+    });
+    return keys;
+  }, [expandedWorkspaces, projectGroups]);
+
   const projectRows = useMemo(
-    () => buildProjectSidebarRows(projectGroups, collapsed ? new Set() : new Set(expandedWorkspaces)),
-    [collapsed, expandedWorkspaces, projectGroups]
+    () => buildProjectSidebarRows(projectGroups, collapsed ? new Set() : expandedProjectKeys),
+    [collapsed, expandedProjectKeys, projectGroups]
   );
 
   const recentConversationList = useMemo(
-    () =>
-      sidebarResponse
-        ? buildBackendSidebarView(sidebarResponse).recentConversations
-        : buildRecentConversationList(conversations, pinnedConversations),
+    () => buildGlobalRecentConversationList(conversations, pinnedConversations, sidebarResponse),
     [conversations, pinnedConversations, sidebarResponse]
   );
 
@@ -474,14 +483,6 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
           )}
           {!collapsedSections.has('projects') &&
             projectRows.map((row) => {
-              if (row.kind === 'conversation') {
-                return (
-                  <div key={`${row.projectKey}:${row.conversation.id}`}>
-                    {renderConversation(row.conversation, true)}
-                  </div>
-                );
-              }
-
               const group = row.project;
               const projectMenu = group.conversations.length > 0 && (
                 <Menu
@@ -501,63 +502,64 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
               );
 
               return (
-                <div key={group.key} className={classNames('group flex items-center gap-2px', !collapsed && 'px-12px')}>
-                  <Tooltip content={group.displayName} position='right'>
-                    <Button
-                      type='text'
-                      long
-                      className={classNames(
-                        '!h-34px !justify-start !px-0 !rd-8px !text-t-primary',
-                        collapsed && '!justify-center'
-                      )}
-                      onClick={() => handleToggleWorkspace(group.key)}
-                    >
-                      <FolderClose theme='outline' size='16' fill='currentColor' className='shrink-0' />
-                      {!collapsed && (
-                        <span className='ms-8px min-w-0 truncate text-14px font-[500]'>{group.displayName}</span>
-                      )}
-                      {!collapsed && (
-                        <Right
-                          theme='outline'
-                          size={12}
-                          className={classNames('ms-auto shrink-0 transition-transform', {
-                            'rotate-90': expandedWorkspaces.includes(group.key),
-                          })}
-                        />
-                      )}
-                    </Button>
-                  </Tooltip>
-                  {!collapsed && (
-                    <div className='flex shrink-0 items-center opacity-0 transition-opacity group-hover:opacity-100'>
-                      <Tooltip content={t('conversation.history.newConversationInProject')} position='top'>
-                        <Button
-                          type='text'
-                          size='mini'
-                          aria-label={t('conversation.history.newConversationInProject')}
-                          icon={<Plus theme='outline' size='14' fill='currentColor' />}
-                          disabled={!group.workspace}
-                          onClick={() => void navigate('/guid', { state: { workspace: group.workspace } })}
-                        />
-                      </Tooltip>
-                      {projectMenu && (
-                        <Dropdown
-                          droplist={projectMenu}
-                          trigger='click'
-                          position='br'
-                          getPopupContainer={() => document.body}
-                          unmountOnExit={false}
-                        >
+                <div key={group.key} className='min-w-0'>
+                  <div className={classNames('group flex items-center gap-2px', !collapsed && 'px-10px')}>
+                    <ProjectSidebarToggle
+                      collapsed={collapsed}
+                      displayName={group.displayName}
+                      expanded={expandedProjectKeys.has(group.key)}
+                      onToggle={() => {
+                        const legacyWorkspaceKey =
+                          group.workspace &&
+                          expandedWorkspaces.includes(group.workspace) &&
+                          !expandedWorkspaces.includes(group.key)
+                            ? group.workspace
+                            : group.key;
+                        handleToggleWorkspace(legacyWorkspaceKey);
+                      }}
+                    />
+                    {!collapsed && (
+                      <div className='flex shrink-0 items-center opacity-0 transition-opacity group-hover:opacity-100'>
+                        <Tooltip content={t('conversation.history.newConversationInProject')} position='top'>
                           <Button
                             type='text'
                             size='mini'
-                            aria-label={t('common.more')}
-                            icon={<MoreOne theme='outline' size='14' fill='currentColor' />}
-                            onClick={(event) => event.stopPropagation()}
+                            aria-label={t('conversation.history.newConversationInProject')}
+                            icon={<Plus theme='outline' size='14' fill='currentColor' />}
+                            disabled={!group.workspace}
+                            onClick={() =>
+                              void navigate('/guid', {
+                                state: {
+                                  workspace: group.workspace,
+                                  ...(group.projectId ? { projectId: group.projectId } : {}),
+                                },
+                              })
+                            }
                           />
-                        </Dropdown>
-                      )}
-                    </div>
-                  )}
+                        </Tooltip>
+                        {projectMenu && (
+                          <Dropdown
+                            droplist={projectMenu}
+                            trigger='click'
+                            position='br'
+                            getPopupContainer={() => document.body}
+                            unmountOnExit={false}
+                          >
+                            <Button
+                              type='text'
+                              size='mini'
+                              aria-label={t('common.more')}
+                              icon={<MoreOne theme='outline' size='14' fill='currentColor' />}
+                              onClick={(event) => event.stopPropagation()}
+                            />
+                          </Dropdown>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {row.conversations.map((conversation) => (
+                    <div key={`${group.key}:${conversation.id}`}>{renderConversation(conversation, true)}</div>
+                  ))}
                 </div>
               );
             })}
@@ -565,7 +567,23 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
 
         {/* L1: Recent section — one flat list in activity order */}
         <div className='min-w-0'>
-          {!collapsed && <SectionLabel sectionKey='recents' label={t('conversation.history.recents')} />}
+          {!collapsed && (
+            <SectionLabel
+              sectionKey='recents'
+              label={t('conversation.history.recents')}
+              trailing={
+                <Tooltip content={t('common.add')} position='top'>
+                  <Button
+                    type='text'
+                    size='mini'
+                    aria-label={t('common.add')}
+                    icon={<Plus theme='outline' size='14' fill='currentColor' />}
+                    onClick={() => void navigate('/guid')}
+                  />
+                </Tooltip>
+              }
+            />
+          )}
           {!collapsedSections.has('recents') &&
             recentConversationList.map((conversation) => renderConversation(conversation))}
         </div>

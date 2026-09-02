@@ -12,13 +12,19 @@ import {
   buildProjectSidebarRows,
   mergeBackendProjectsWithRecentWorkspaces,
   buildGroupedHistory,
+  buildGlobalRecentConversationList,
   buildProjectSidebarEntries,
   buildRecentConversationList,
 } from '@/renderer/pages/conversation/GroupedHistory/utils/groupingHelpers';
 
 const t = (key: string): string => key;
 
-const conversation = (id: string, extra: TChatConversation['extra'], modified_at: number): TChatConversation =>
+const conversation = (
+  id: string,
+  extra: TChatConversation['extra'],
+  modified_at: number,
+  project_id?: string
+): TChatConversation =>
   ({
     id,
     name: id,
@@ -26,6 +32,7 @@ const conversation = (id: string, extra: TChatConversation['extra'], modified_at
     created_at: modified_at,
     modified_at,
     extra,
+    project_id,
   }) as TChatConversation;
 
 describe('buildGroupedHistory', () => {
@@ -134,6 +141,93 @@ describe('buildRecentConversationList', () => {
   });
 });
 
+describe('buildGlobalRecentConversationList', () => {
+  it('excludes project conversations when the backend chats group excludes them', () => {
+    const pinned = conversation('pinned', {}, 300);
+    const projectChat = conversation('project-chat', {}, 200, 'project-1');
+    const regularChat = conversation('regular-chat', {}, 100);
+    const response: SidebarResponse = {
+      has_more_groups: false,
+      groups: [
+        {
+          scope: { type: 'pinned' },
+          items: [{ type: 'conversation', conversation: pinned }],
+          has_more: false,
+        },
+        {
+          scope: { type: 'project', project_id: 'project-1', name: '项目一' },
+          items: [{ type: 'conversation', conversation: projectChat }],
+          has_more: false,
+        },
+        {
+          scope: { type: 'chats' },
+          items: [{ type: 'conversation', conversation: regularChat }],
+          has_more: false,
+        },
+      ],
+    };
+
+    expect(
+      buildGlobalRecentConversationList([regularChat, projectChat, pinned], [pinned], response).map(({ id }) => id)
+    ).toEqual(['regular-chat']);
+  });
+
+  it('trusts the backend chats group when its conversations carry project ids', () => {
+    const recentChat = conversation('recent-chat', {}, 100, 'conversation-project-1');
+    const projectChat = conversation('project-chat', {}, 200, 'project-1');
+    const response: SidebarResponse = {
+      has_more_groups: false,
+      groups: [
+        {
+          scope: { type: 'project', project_id: 'project-1', name: '项目一' },
+          items: [{ type: 'conversation', conversation: projectChat }],
+          has_more: false,
+        },
+        {
+          scope: { type: 'chats' },
+          items: [{ type: 'conversation', conversation: recentChat }],
+          has_more: false,
+        },
+      ],
+    };
+
+    expect(buildGlobalRecentConversationList([recentChat, projectChat], [], response)).toEqual([recentChat]);
+  });
+
+  it('keeps project conversations out of recent history without a sidebar response', () => {
+    const projectChat = conversation('project-chat', {}, 200, 'project-1');
+    const legacyWorkspaceChat = conversation(
+      'legacy-project-chat',
+      { workspace: 'D:/work/project-1', custom_workspace: true },
+      150
+    );
+    const regularChat = conversation('regular-chat', {}, 100);
+
+    expect(
+      buildGlobalRecentConversationList([projectChat, legacyWorkspaceChat, regularChat], []).map(({ id }) => id)
+    ).toEqual(['regular-chat']);
+  });
+
+  it('deduplicates conversations that are present in both the full history and sidebar windows', () => {
+    const conversationFromHistory = conversation('same-chat', {}, 100);
+    const conversationFromSidebar = conversation('same-chat', {}, 200);
+    const response: SidebarResponse = {
+      has_more_groups: false,
+      groups: [
+        {
+          scope: { type: 'chats' },
+          items: [{ type: 'conversation', conversation: conversationFromSidebar }],
+          has_more: false,
+        },
+      ],
+    };
+
+    expect(buildGlobalRecentConversationList([conversationFromHistory], [], response)).toEqual([
+      conversationFromSidebar,
+    ]);
+  });
+});
+
 describe('buildBackendSidebarView', () => {
   it('uses backend groups for projects, pinned conversations, and recent chats', () => {
     const pinned = conversation('pinned', {}, 300);
@@ -222,7 +316,7 @@ describe('mergeBackendProjectsWithRecentWorkspaces', () => {
 });
 
 describe('buildProjectSidebarRows', () => {
-  it('adds indented conversation rows only when the project is expanded', () => {
+  it('keeps projects as top-level siblings while nesting only their own conversations', () => {
     const project = {
       key: 'project:project-1',
       projectId: 'project-1',
@@ -231,11 +325,17 @@ describe('buildProjectSidebarRows', () => {
       conversations: [conversation('project-chat', {}, 100)],
       hasMore: false,
     };
+    const siblingProject = {
+      key: 'local:D:/work/project-2',
+      workspace: 'D:/work/project-2',
+      displayName: '项目二',
+      conversations: [],
+      hasMore: false,
+    };
 
-    expect(buildProjectSidebarRows([project], new Set())).toEqual([{ kind: 'project', project }]);
-    expect(buildProjectSidebarRows([project], new Set([project.key]))).toEqual([
-      { kind: 'project', project },
-      { kind: 'conversation', projectKey: project.key, conversation: project.conversations[0] },
+    expect(buildProjectSidebarRows([project, siblingProject], new Set([project.key]))).toEqual([
+      { project, conversations: project.conversations },
+      { project: siblingProject, conversations: [] },
     ]);
   });
 });

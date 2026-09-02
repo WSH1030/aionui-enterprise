@@ -20,7 +20,7 @@
 import { Message } from '@arco-design/web-react';
 import { useAssistantEditor, useAssistantList } from '@/renderer/hooks/assistant';
 import { useManagedAgentRuntimeCatalog } from '@/renderer/hooks/agent/useManagedAgents';
-import { buildAssistantEditorBackends, resolveAvatarImageSrc } from './assistantUtils';
+import { buildAssistantEditorBackends, resolveAssistantDisplayName, resolveAvatarImageSrc } from './assistantUtils';
 import AssistantEditorPage from './AssistantEditorPage';
 import AssistantHomeTabs from './home/AssistantHomeTabs';
 import DeleteAssistantModal from './DeleteAssistantModal';
@@ -80,7 +80,7 @@ const AssistantSettings: React.FC = () => {
 
           return {
             id: assistant.id,
-            label: assistant.name_i18n?.[localeKey] || assistant.name,
+            label: resolveAssistantDisplayName(assistant, localeKey),
             src,
           };
         })

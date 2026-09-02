@@ -50,6 +50,7 @@ type GuidNavigationState = {
   preservePrefillDraft?: boolean;
   focusPrefill?: boolean;
   workspace?: string;
+  projectId?: string;
   [key: string]: unknown;
 };
 
@@ -253,6 +254,7 @@ const GuidPage: React.FC = () => {
     setFiles: guidInput.setFiles,
     dir: guidInput.dir,
     setDir: guidInput.setDir,
+    projectId: navState?.projectId ?? null,
     setLoading: guidInput.setLoading,
     loading: guidInput.loading,
 

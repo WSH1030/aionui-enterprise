@@ -73,6 +73,24 @@ describe('AssistantSelectionArea', () => {
     expect(screen.queryByText('Summarize today')).not.toBeInTheDocument();
   });
 
+  it('shows the Rd CLI brand and Rd logo for the built-in Aion CLI pill', () => {
+    render(
+      <AssistantSelectionArea
+        selectedAssistantId='bare-aionrs'
+        assistants={assistants()}
+        localeKey='en-US'
+        onSelectAssistant={vi.fn()}
+      />
+    );
+
+    const pill = screen.getByTestId('preset-pill-bare-aionrs');
+    expect(pill).toHaveTextContent('Rd CLI');
+    expect(pill).not.toHaveTextContent('Aion CLI');
+    const image = pill.querySelector('img');
+    expect(image).toHaveAttribute('src', expect.stringContaining('app.png'));
+    expect(image?.parentElement).toHaveStyle({ borderRadius: '20%' });
+  });
+
   it('moves overflow assistants into a more dropdown', async () => {
     render(
       <AssistantSelectionArea
@@ -237,7 +255,7 @@ describe('AssistantSelectionArea', () => {
         .getAllByRole('button')
         .slice(0, 4)
         .map((node) => node.textContent?.trim())
-    ).toEqual(['Aion CLI', 'Early', 'Mid', 'Late']);
+    ).toEqual(['Rd CLI', 'Early', 'Mid', 'Late']);
   });
 
   it('keeps a selected overflow assistant visible in the top pill row', () => {

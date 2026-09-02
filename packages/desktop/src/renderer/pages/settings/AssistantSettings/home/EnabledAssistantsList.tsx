@@ -5,7 +5,7 @@
  */
 
 import type { AssistantListItem } from '../types';
-import { resolveAssistantSourceTag } from '../assistantUtils';
+import { resolveAssistantDisplayName, resolveAssistantSourceTag } from '../assistantUtils';
 import AssistantAvatar from '../AssistantAvatar';
 import RuntimeBadge from './RuntimeBadge';
 import {
@@ -63,7 +63,7 @@ const EnabledAssistantRow: React.FC<EnabledAssistantRowProps> = ({
     id: assistant.id,
     disabled: !draggable,
   });
-  const name = assistant.name_i18n?.[localeKey] || assistant.name;
+  const name = resolveAssistantDisplayName(assistant, localeKey);
   const sourceTag = resolveAssistantSourceTag(assistant.source);
   const sourceLabel =
     sourceTag === 'builtin'

@@ -27,12 +27,44 @@ import {
 } from '@/renderer/utils/model/assistantAvatar';
 import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';
 import { resolveBackendAssetUrl } from '@/renderer/utils/platform';
+import appLogo from '@renderer/assets/logos/brand/app.png';
 import useSWR from 'swr';
 
 /** Map of lowercased backend id -> logo URL. */
 export type AgentLogoMap = Record<string, string>;
 
 export const AGENT_LOGOS_SWR_KEY = 'agents.logos';
+
+export const RD_CLI_DISPLAY_NAME = 'Rd CLI';
+
+const AION_CLI_DISPLAY_ALIASES = new Set(['aion cli', 'aioncli', 'aionrs']);
+
+/** Resolve the user-facing agent brand without changing runtime identifiers. */
+export function resolveAgentDisplayName({
+  backend,
+  agentName,
+  fallback = 'Agent',
+}: {
+  backend?: string | null;
+  agentName?: string | null;
+  fallback?: string;
+}): string {
+  const normalizedName = agentName?.trim();
+  if (normalizedName && AION_CLI_DISPLAY_ALIASES.has(normalizedName.toLowerCase())) {
+    return RD_CLI_DISPLAY_NAME;
+  }
+
+  if (normalizedName) return normalizedName;
+
+  const normalizedBackend = backend?.trim();
+  if (normalizedBackend && AION_CLI_DISPLAY_ALIASES.has(normalizedBackend.toLowerCase())) {
+    return RD_CLI_DISPLAY_NAME;
+  }
+
+  return normalizedBackend || fallback;
+}
+
+const isBuiltInAionCliBackend = (backend?: string | null): boolean => backend?.trim().toLowerCase() === 'aionrs';
 
 function collectManagedAgentLogoKeys(agent: ManagedAgent): string[] {
   const keys = [agent.backend, agent.agent_type, agent.id, agent.custom_agent_id];
@@ -120,6 +152,7 @@ export function resolveAgentLogo(
     isExtension?: boolean;
   }
 ): string | null {
+  if (isBuiltInAionCliBackend(opts.backend)) return appLogo;
   if (opts.icon) return normalizeLogoUrl(opts.icon);
 
   if (opts.isExtension && opts.custom_agent_id) {
@@ -140,6 +173,10 @@ export function resolveAgentAvatar(
     isExtension?: boolean;
   }
 ): AssistantAvatar {
+  if (isBuiltInAionCliBackend(opts.backend)) {
+    return { kind: 'image', value: appLogo };
+  }
+
   const explicitAvatar = resolveAssistantAvatar(opts.icon || undefined);
   if (explicitAvatar.kind !== 'fallback') return explicitAvatar;
 
@@ -150,6 +187,11 @@ export function resolveAgentAvatar(
   }
 
   return lookupBackendAvatar(logos, opts.backend);
+}
+
+/** Return whether a resolved image source is the Rd Worker brand asset. */
+export function isRdBrandLogoSource(source: string | null | undefined): boolean {
+  return source === appLogo;
 }
 
 /**

@@ -12,6 +12,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ipcBridge } from '@/common';
 import { useManagedAgents } from '@/renderer/hooks/agent/useManagedAgents';
 import { formatManagedAgentDiagnosticMessage } from '@/renderer/utils/model/agentTypes';
+import { resolveAgentDisplayName } from '@/renderer/utils/model/agentLogo';
 import AgentRepairPanel from './AgentRepairPanel';
 import { BoundAssistantList, getBoundAssistants, useAssistantsForAgents } from './BoundAssistants';
 
@@ -38,20 +39,22 @@ const AgentRepairPage: React.FC = () => {
     try {
       setIsTesting(true);
       const result = await ipcBridge.acpConversation.checkManagedAgentHealthById.invoke({ id: agent.id });
+      const resultDisplayName = resolveAgentDisplayName({ backend: result.backend, agentName: result.name });
+      const displayResult = { ...result, name: resultDisplayName };
       await refreshCatalog();
       switch (result.status) {
         case 'online':
-          Message.success(t('settings.agentManagement.testConnectionOnline', { name: result.name }));
+          Message.success(t('settings.agentManagement.testConnectionOnline', { name: resultDisplayName }));
           break;
         case 'missing':
-          Message.warning(t('settings.agentManagement.testConnectionMissing', { name: result.name }));
+          Message.warning(t('settings.agentManagement.testConnectionMissing', { name: resultDisplayName }));
           break;
         case 'offline':
           Message.warning(
-            formatManagedAgentDiagnosticMessage(t, result) ||
+            formatManagedAgentDiagnosticMessage(t, displayResult) ||
               (result.last_check_error_code === 'auth_required'
-                ? t('settings.agentManagement.testConnectionAuth', { name: result.name })
-                : t('settings.agentManagement.testConnectionOffline', { name: result.name }))
+                ? t('settings.agentManagement.testConnectionAuth', { name: resultDisplayName })
+                : t('settings.agentManagement.testConnectionOffline', { name: resultDisplayName }))
           );
           break;
         default:
@@ -99,6 +102,7 @@ const AgentRepairPage: React.FC = () => {
   };
 
   const boundAssistants = getBoundAssistants(agent, assistants);
+  const agentDisplayName = resolveAgentDisplayName({ backend: agent.backend, agentName: agent.name });
 
   return (
     <div data-testid='agent-repair-page' className='flex h-full min-h-0 flex-col overflow-hidden bg-transparent'>
@@ -116,7 +120,7 @@ const AgentRepairPage: React.FC = () => {
           >
             {t('common.goBack', { defaultValue: 'Back' })}
           </Button>
-          <div className='truncate text-14px font-600 text-t-primary'>{agent.name}</div>
+          <div className='truncate text-14px font-600 text-t-primary'>{agentDisplayName}</div>
         </div>
         <Button
           type='outline'

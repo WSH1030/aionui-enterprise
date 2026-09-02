@@ -16,6 +16,7 @@ let currentLanguage = 'en-US';
 // logo via `resolveAgentLogo(useAgentLogos(), ...)`, so the test mirrors the
 // backend-provided map here.
 const TEST_LOGOS: Record<string, string> = {
+  aionrs: '/brand/rd-agent.png',
   codex: '/api/assets/logos/tools/coding/codex.svg',
   gemini: '/api/assets/logos/ai-major/gemini.svg',
   'openclaw-gateway': '/api/assets/logos/tools/openclaw.svg',
@@ -23,7 +24,10 @@ const TEST_LOGOS: Record<string, string> = {
 const getAgentLogo = (backend: string): string | null => TEST_LOGOS[backend.toLowerCase()] ?? null;
 
 vi.mock('@/renderer/utils/model/agentLogo', () => ({
+  RD_CLI_DISPLAY_NAME: 'Rd CLI',
   useAgentLogos: () => TEST_LOGOS,
+  resolveAgentDisplayName: ({ backend, agentName }: { backend?: string; agentName?: string }) =>
+    backend === 'aionrs' && (!agentName || agentName === 'Aion CLI') ? 'Rd CLI' : agentName || backend || 'Agent',
   resolveAgentLogo: (logos: Record<string, string>, opts: { icon?: string | null; backend?: string | null }) => {
     if (opts.icon) return opts.icon;
     if (!opts.backend) return null;
@@ -173,6 +177,35 @@ describe('usePresetAssistantInfo', () => {
       isEmoji: false,
       backend: 'gemini',
       assistantId: 'assistant-social',
+    });
+  });
+
+  it('brands an Aion CLI conversation snapshot as Rd CLI with the Rd logo', () => {
+    useSWRMock.mockImplementation((key: unknown) => {
+      if (key === 'assistants.list') return { data: [], isLoading: false };
+      if (key === 'extensions.acpAdapters') return { data: [], isLoading: false };
+      return { data: undefined, isLoading: false };
+    });
+
+    const conversation = {
+      ...makeConversation({ backend: 'aionrs' }),
+      assistant: {
+        id: 'assistant-aionrs',
+        source: 'generated',
+        name: 'Aion CLI',
+        avatar: '/api/assets/logos/ai-major/aionrs.svg',
+        backend: 'aionrs',
+      },
+    } as TChatConversation;
+
+    const { result } = renderHook(() => usePresetAssistantInfo(conversation));
+
+    expect(result.current.info).toEqual({
+      name: 'Rd CLI',
+      logo: '/brand/rd-agent.png',
+      isEmoji: false,
+      backend: 'aionrs',
+      assistantId: 'assistant-aionrs',
     });
   });
 

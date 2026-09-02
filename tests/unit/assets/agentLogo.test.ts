@@ -10,6 +10,8 @@ import {
   fetchAgentLogos,
   resolveAgentAvatar,
   resolveAgentLogo,
+  resolveAgentDisplayName,
+  isRdBrandLogoSource,
   isDefaultModel,
   getModelDisplayLabel,
 } from '@/renderer/utils/model/agentLogo';
@@ -66,6 +68,10 @@ describe('agentLogo', () => {
       expect(resolveAgentLogo(LOGOS, { backend: 'Claude' })).toContain('/api/assets/logos/ai-major/claude.svg');
     });
 
+    it('uses the Rd Worker brand logo for the built-in Aion CLI backend', () => {
+      expect(resolveAgentLogo(LOGOS, { backend: 'aionrs' })).toContain('app.png');
+    });
+
     it('returns logo for lowercase input', () => {
       expect(resolveAgentLogo(LOGOS, { backend: 'gemini' })).toContain('/api/assets/logos/ai-major/gemini.svg');
     });
@@ -94,7 +100,34 @@ describe('agentLogo', () => {
     });
   });
 
+  describe('resolveAgentDisplayName', () => {
+    it('brands the built-in Aion CLI identity as Rd CLI', () => {
+      expect(resolveAgentDisplayName({ backend: 'aionrs', agentName: 'Aion CLI' })).toBe('Rd CLI');
+    });
+
+    it('brands a nameless built-in aionrs runtime as Rd CLI', () => {
+      expect(resolveAgentDisplayName({ backend: 'aionrs' })).toBe('Rd CLI');
+    });
+
+    it('preserves a user-defined assistant name running on aionrs', () => {
+      expect(resolveAgentDisplayName({ backend: 'aionrs', agentName: 'Industrial Expert' })).toBe('Industrial Expert');
+    });
+  });
+
   describe('resolveAgentAvatar', () => {
+    it('uses the Rd Worker brand logo for the built-in Aion CLI avatar', () => {
+      const avatar = resolveAgentAvatar(LOGOS, { backend: 'aionrs' });
+      expect(avatar).toEqual({
+        kind: 'image',
+        value: expect.stringContaining('app.png'),
+      });
+      expect(avatar.kind === 'image' && isRdBrandLogoSource(avatar.value)).toBe(true);
+    });
+
+    it('does not apply Rd Worker brand styling to another agent logo', () => {
+      expect(isRdBrandLogoSource(LOGOS.claude)).toBe(false);
+    });
+
     it('keeps explicit emoji avatars as emoji', () => {
       expect(resolveAgentAvatar(LOGOS, { icon: '🧠', backend: 'claude' })).toEqual({
         kind: 'emoji',

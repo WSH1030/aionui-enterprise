@@ -19,6 +19,7 @@ import TeamChatEmptyState from './TeamChatEmptyState';
 import { useTeamTabs } from '@/renderer/pages/team/hooks/TeamTabsContext';
 import { usePresetAssistantInfo } from '@/renderer/hooks/agent/usePresetAssistantInfo';
 import { resolveConversationBackend } from '@/renderer/pages/conversation/utils/conversationAssistantIdentity';
+import { resolveAgentDisplayName as resolveAgentBrandName } from '@/renderer/utils/model/agentLogo';
 
 const AcpChat = React.lazy(() => import('@/renderer/pages/conversation/platforms/acp/AcpChat'));
 const AionrsChat = React.lazy(() => import('@/renderer/pages/conversation/platforms/aionrs/AionrsChat'));
@@ -170,11 +171,10 @@ const TeamChatView: React.FC<TeamChatViewProps> = ({
   const teamSendMessageOverride = team_id ? teamSendMessage : undefined;
   const resolvedAssistantBackend =
     resolveConversationBackend(conversation, assistant_backend || presetAssistantInfo?.backend) || 'claude';
-  const resolvedAssistantName = resolveAssistantDisplayName(
-    conversation,
-    presetAssistantInfo?.name ?? null,
-    assistant_name
-  );
+  const resolvedAssistantName = resolveAgentBrandName({
+    backend: resolvedAssistantBackend,
+    agentName: resolveAssistantDisplayName(conversation, presetAssistantInfo?.name ?? null, assistant_name),
+  });
   const slotWork = slot_id ? teamRunView.slotWorkBySlot[slot_id] : undefined;
   // Prefer the event-driven stopped flag so the prompt shows even when the stale
   // slot has no `blocked_reason`; fall back to slot-derived status text otherwise.

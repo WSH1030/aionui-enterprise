@@ -35,6 +35,9 @@ const { messageSuccess, messageWarning, messageError } = vi.hoisted(() => ({
 const { openExternalUrl } = vi.hoisted(() => ({
   openExternalUrl: vi.fn().mockResolvedValue(undefined),
 }));
+const { configSet } = vi.hoisted(() => ({
+  configSet: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('@arco-design/web-react', async () => {
   const actual = await vi.importActual<typeof import('@arco-design/web-react')>('@arco-design/web-react');
   return {
@@ -86,6 +89,12 @@ vi.mock('@renderer/utils/platform', async () => {
     openExternalUrl,
   };
 });
+
+vi.mock('@/common/config/configService', () => ({
+  configService: {
+    set: configSet,
+  },
+}));
 
 // Keep the test focused on LocalAgents' own logic — stub heavy children.
 vi.mock('@/renderer/components/base/AionModal', () => ({ default: () => null }));
@@ -375,6 +384,35 @@ describe('LocalAgents', () => {
     const claude = screen.getByText('Claude Code');
     expect(kimi.compareDocumentPosition(aion) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(claude.compareDocumentPosition(kimi) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+  });
+
+  it('creates the local Ollama Qwen agent and makes its assistant the new-chat default', async () => {
+    const refreshCatalog = vi.fn().mockResolvedValue(undefined);
+    useManagedAgents.mockReturnValue({
+      agents: makeAgents(),
+      revalidate: vi.fn(),
+      refreshCatalog,
+    });
+    vi.mocked(ipcBridge.acpConversation.createCustomAgent.invoke).mockResolvedValue({
+      id: 'custom-codex-qwen',
+    } as never);
+    vi.mocked(ipcBridge.assistants.list.invoke).mockResolvedValue([
+      { id: 'assistant-codex-qwen', agent_id: 'custom-codex-qwen', enabled: true },
+    ] as never);
+
+    render(<LocalAgents />);
+
+    fireEvent.click(screen.getByTestId('btn-configure-local-ollama-qwen'));
+
+    await waitFor(() => {
+      expect(ipcBridge.acpConversation.createCustomAgent.invoke).toHaveBeenCalledWith({
+        name: 'settings.agentManagement.localOllamaQwenName',
+        command: 'codex',
+        args: ['--acp', '--oss', '--local-provider', 'ollama', '--model', 'qwen3.5:4b'],
+        env: [{ name: 'OLLAMA_HOST', value: 'http://127.0.0.1:11434' }],
+      });
+      expect(configSet).toHaveBeenCalledWith('guid.lastAssistantId', 'assistant-codex-qwen');
+    });
   });
 
   it('renders agent management as a single diagnostics page without local/remote tabs', () => {

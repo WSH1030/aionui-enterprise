@@ -4,9 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { Assistant } from '@/common/types/agent/assistantTypes';
+import { assistantRuntimeKey, type Assistant } from '@/common/types/agent/assistantTypes';
+import { resolveAgentDisplayName } from './agentLogo';
 
-type AssistantNameSource = Pick<Assistant, 'id' | 'name' | 'name_i18n'>;
+type AssistantNameSource = Pick<Assistant, 'id' | 'name' | 'name_i18n' | 'agent'>;
 
 export function resolveAssistantName(
   assistant: AssistantNameSource | null | undefined,
@@ -18,5 +19,9 @@ export function resolveAssistantName(
   }
 
   const localizedName = assistant.name_i18n?.[localeKey] || assistant.name_i18n?.['en-US'];
-  return localizedName?.trim() || assistant.name?.trim() || assistant.id || fallback;
+  return resolveAgentDisplayName({
+    backend: assistantRuntimeKey(assistant),
+    agentName: localizedName?.trim() || assistant.name?.trim() || assistant.id,
+    fallback,
+  });
 }

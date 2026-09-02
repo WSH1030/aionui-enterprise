@@ -11,7 +11,12 @@ import { ipcBridge } from '@/common';
 import { assistantRuntimeKey, type Assistant } from '@/common/types/agent/assistantTypes';
 import { resolveLocaleKey } from '@/common/utils';
 import type { AgentLogoMap } from '@/renderer/utils/model/agentLogo';
-import { resolveAgentLogo, useAgentLogos } from '@/renderer/utils/model/agentLogo';
+import {
+  RD_CLI_DISPLAY_NAME,
+  resolveAgentDisplayName,
+  resolveAgentLogo,
+  useAgentLogos,
+} from '@/renderer/utils/model/agentLogo';
 import { isLikelyLocalFilePath, resolveAssistantAvatar } from '@/renderer/utils/model/assistantAvatar';
 import useSWR from 'swr';
 export interface PresetAssistantInfo {
@@ -211,27 +216,34 @@ function hasMatchingEnabledSkills(candidateSkills: string[] | undefined, enabled
 /**
  * Build assistant info from a backend-provided Assistant record.
  */
-function buildPresetInfoFromAssistant(assistant: Assistant, locale: string): PresetAssistantInfo {
+function buildPresetInfoFromAssistant(assistant: Assistant, locale: string, logos: AgentLogoMap): PresetAssistantInfo {
   const localeKey = resolveLocaleKey(locale);
-  const name = assistant.name_i18n?.[localeKey] || assistant.name_i18n?.[locale] || assistant.name || assistant.id;
+  const backend = assistantRuntimeKey(assistant) || undefined;
+  const sourceName =
+    assistant.name_i18n?.[localeKey] || assistant.name_i18n?.[locale] || assistant.name || assistant.id;
+  const name = resolveAgentDisplayName({ backend, agentName: sourceName });
   const avatar = typeof assistant.avatar === 'string' ? assistant.avatar : '';
-  const normalized = normalizeAvatar(avatar);
+  const rdCliLogo = name === RD_CLI_DISPLAY_NAME ? resolveAgentLogo(logos, { backend }) : null;
+  const normalized = rdCliLogo ? { logo: rdCliLogo, isEmoji: false } : normalizeAvatar(avatar);
   return {
     name,
     logo: normalized.logo,
     isEmoji: normalized.isEmoji,
     isFallback: normalized.isFallback,
-    backend: assistantRuntimeKey(assistant) || undefined,
+    backend,
     assistantId: assistant.id,
   };
 }
 
 function buildPresetInfoFromConversationAssistant(
-  assistant: NonNullable<TChatConversation['assistant']>
+  assistant: NonNullable<TChatConversation['assistant']>,
+  logos: AgentLogoMap
 ): PresetAssistantInfo {
-  const normalized = normalizeAvatar(assistant.avatar);
+  const name = resolveAgentDisplayName({ backend: assistant.backend, agentName: assistant.name });
+  const rdCliLogo = name === RD_CLI_DISPLAY_NAME ? resolveAgentLogo(logos, { backend: assistant.backend }) : null;
+  const normalized = rdCliLogo ? { logo: rdCliLogo, isEmoji: false } : normalizeAvatar(assistant.avatar);
   return {
-    name: assistant.name,
+    name,
     logo: normalized.logo,
     isEmoji: normalized.isEmoji,
     isFallback: normalized.isFallback,
@@ -243,6 +255,7 @@ function buildPresetInfoFromConversationAssistant(
 function inferLegacyAssistantInfo(
   conversation: TChatConversation,
   locale: string,
+  logos: AgentLogoMap,
   assistants?: Assistant[] | null
 ): PresetAssistantInfo | null {
   const { rules, enabled_skills } = extractLegacyPresetPayload(conversation);
@@ -256,12 +269,12 @@ function inferLegacyAssistantInfo(
       assistant.name_i18n?.['en-US'],
     ])
   );
-  if (byName) return buildPresetInfoFromAssistant(byName, locale);
+  if (byName) return buildPresetInfoFromAssistant(byName, locale, logos);
 
   const bySkills = assistants?.filter((assistant) =>
     hasMatchingEnabledSkills(assistant.enabled_skills, enabled_skills)
   );
-  if (bySkills?.length === 1) return buildPresetInfoFromAssistant(bySkills[0], locale);
+  if (bySkills?.length === 1) return buildPresetInfoFromAssistant(bySkills[0], locale, logos);
 
   return null;
 }
@@ -314,13 +327,13 @@ export function usePresetAssistantInfo(conversation: TChatConversation | undefin
         ].filter((value, index, values) => Boolean(value) && values.indexOf(value) === index);
         const catalogAssistant = findAssistantByIdentityCandidates(assistantsList, snapshotCandidates);
         if (catalogAssistant) {
-          return { info: buildPresetInfoFromAssistant(catalogAssistant, locale), isLoading: false };
+          return { info: buildPresetInfoFromAssistant(catalogAssistant, locale, logos), isLoading: false };
         }
         if (isLoadingAssistants) return { info: null, isLoading: true };
       }
 
       return {
-        info: buildPresetInfoFromConversationAssistant(conversation.assistant),
+        info: buildPresetInfoFromConversationAssistant(conversation.assistant, logos),
         isLoading: false,
       };
     }
@@ -356,13 +369,14 @@ export function usePresetAssistantInfo(conversation: TChatConversation | undefin
 
     const resolveLegacyRuntimeInfo = (): { info: PresetAssistantInfo; isLoading: false } | null => {
       if (!runtimeRowAgentId) return null;
-      const name = resolveLegacyRuntimeDisplayName(conversation);
-      if (!name) return null;
+      const sourceName = resolveLegacyRuntimeDisplayName(conversation);
+      if (!sourceName) return null;
       const legacyBackend =
         typeof (conversation.extra as { backend?: unknown })?.backend === 'string'
           ? ((conversation.extra as { backend?: string }).backend ?? '').trim()
           : '';
       const backendLogo = resolveAgentLogo(logos, { backend: legacyBackend });
+      const name = resolveAgentDisplayName({ backend: legacyBackend, agentName: sourceName });
       if (backendLogo) {
         return {
           info: { name, logo: backendLogo, isEmoji: false, backend: legacyBackend },
@@ -373,10 +387,10 @@ export function usePresetAssistantInfo(conversation: TChatConversation | undefin
     };
 
     if (assistantMatch) {
-      return { info: buildPresetInfoFromAssistant(assistantMatch, locale), isLoading: false };
+      return { info: buildPresetInfoFromAssistant(assistantMatch, locale, logos), isLoading: false };
     }
 
-    const inferredInfo = inferLegacyAssistantInfo(conversation, locale, assistantsList);
+    const inferredInfo = inferLegacyAssistantInfo(conversation, locale, logos, assistantsList);
     if (inferredInfo) return { info: inferredInfo, isLoading: false };
 
     const { hasPayload } = extractLegacyPresetPayload(conversation);

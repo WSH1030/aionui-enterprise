@@ -362,6 +362,14 @@ describe('GuidPage', () => {
     expect(capturedGuidInputCardProps.at(-1)?.focusRequestKey).toBeUndefined();
   });
 
+  it('passes the project id from navigation state into the conversation creator', () => {
+    locationMock.state = { projectId: 'project-1', workspace: 'D:/work/project-1' };
+
+    render(<GuidPage />);
+
+    expect(capturedGuidSendDeps.at(-1)).toMatchObject({ projectId: 'project-1' });
+  });
+
   it('keeps replacing attachments supplied by an ordinary Guid prefill', () => {
     locationMock.state = {
       prefillPrompt: 'Replace prompt and attachments',

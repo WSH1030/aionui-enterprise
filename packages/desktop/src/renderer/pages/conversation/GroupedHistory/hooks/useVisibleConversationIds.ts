@@ -6,7 +6,7 @@ import { useWorkspaceExpansionState } from './useWorkspaceExpansionState';
 
 export const useVisibleConversationIds = (): string[] => {
   const layout = useLayoutContext();
-  const siderCollapsed = layout?.siderCollapsed ?? false;
+  const siderCollapsed = layout?.siderContentCollapsed ?? layout?.siderCollapsed ?? false;
   const { groupedHistory } = useConversationHistoryContext();
   const expandedWorkspaces = useWorkspaceExpansionState();
 

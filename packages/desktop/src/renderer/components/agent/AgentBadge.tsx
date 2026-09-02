@@ -4,8 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { resolveAgentLogo, useAgentLogos } from '@/renderer/utils/model/agentLogo';
+import { resolveAgentDisplayName, resolveAgentLogo, useAgentLogos } from '@/renderer/utils/model/agentLogo';
 import { iconColors } from '@/renderer/styles/colors';
+import appLogo from '@renderer/assets/logos/brand/app.png';
 import { Robot } from '@icon-park/react';
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -31,7 +32,13 @@ export const AgentLogoIcon: React.FC<
   Pick<AgentBadgeProps, 'backend' | 'agentLogo' | 'agentLogoIsEmoji' | 'agentLogoIsFallback' | 'agent_name'>
 > = ({ backend, agentLogo, agentLogoIsEmoji, agentLogoIsFallback, agent_name }) => {
   const logos = useAgentLogos();
+  const displayName = resolveAgentDisplayName({ backend, agentName: agent_name });
   const logoContent = (() => {
+    const normalizedBackend = backend?.trim().toLowerCase();
+    const isAionCli = normalizedBackend === 'aionrs' || agent_name?.trim().toLowerCase() === 'aion cli';
+    if (isAionCli) {
+      return <img src={appLogo} alt={`${displayName} logo`} className='block w-16px h-16px object-contain' />;
+    }
     if (agentLogoIsFallback) {
       return <Robot theme='outline' size={16} fill={iconColors.primary} />;
     }
@@ -39,17 +46,11 @@ export const AgentLogoIcon: React.FC<
       if (agentLogoIsEmoji) {
         return <span className='text-14px leading-none'>{agentLogo}</span>;
       }
-      return (
-        <ThemedLogo
-          src={agentLogo}
-          alt={`${agent_name || 'agent'} logo`}
-          className='block w-16px h-16px object-contain'
-        />
-      );
+      return <ThemedLogo src={agentLogo} alt={`${displayName} logo`} className='block w-16px h-16px object-contain' />;
     }
     const logo = resolveAgentLogo(logos, { backend });
     if (logo) {
-      return <ThemedLogo src={logo} alt={`${backend} logo`} className='block w-16px h-16px object-contain' />;
+      return <ThemedLogo src={logo} alt={`${displayName} logo`} className='block w-16px h-16px object-contain' />;
     }
     return <Robot theme='outline' size={16} fill={iconColors.primary} />;
   })();
@@ -74,6 +75,7 @@ const AgentBadge: React.FC<AgentBadgeProps> = ({
   assistantId,
 }) => {
   const navigate = useNavigate();
+  const displayName = resolveAgentDisplayName({ backend, agentName: agent_name });
   const handleClick = useCallback(() => {
     if (!assistantId) return;
     navigate(`/settings/assistants?highlight=${encodeURIComponent(assistantId)}`);
@@ -92,7 +94,7 @@ const AgentBadge: React.FC<AgentBadgeProps> = ({
         agentLogoIsEmoji={agentLogoIsEmoji}
         agentLogoIsFallback={agentLogoIsFallback}
       />
-      <span className='text-sm text-t-primary'>{agent_name || backend}</span>
+      <span className='text-sm text-t-primary'>{displayName}</span>
     </div>
   );
 };

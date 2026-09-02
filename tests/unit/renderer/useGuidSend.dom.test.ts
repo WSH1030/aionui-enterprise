@@ -49,6 +49,7 @@ const createDeps = (): GuidSendDeps => ({
   files: [],
   setFiles: vi.fn(),
   dir: '',
+  projectId: 'project-1',
   setDir: vi.fn(),
   setLoading: vi.fn(),
   loading: false,
@@ -80,6 +81,19 @@ describe('useGuidSend', () => {
     createConversationInvokeMock.mockResolvedValue({ id: 'conv-1' });
     swrMutateMock.mockReset();
     swrMutateMock.mockResolvedValue(undefined);
+  });
+
+  it('passes the selected project id when creating a project conversation', async () => {
+    const deps = createDeps();
+
+    const { result } = renderHook(() => useGuidSend(deps));
+
+    await act(async () => {
+      await result.current.handleSend();
+    });
+
+    expect(createConversationInvokeMock).toHaveBeenCalledTimes(1);
+    expect(createConversationInvokeMock.mock.calls[0]?.[0]).toMatchObject({ project_id: 'project-1' });
   });
 
   it('passes selected mode into assistant conversation overrides when creating a preset ACP conversation', async () => {

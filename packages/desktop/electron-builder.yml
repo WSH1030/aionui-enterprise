@@ -1,10 +1,10 @@
 appId: com.aionui.app
-productName: AionUi
-executableName: AionUi
+productName: Rd Worker
+executableName: RdWorker
 copyright: Copyright © 2024 AionUi
 
 protocols:
-  - name: AionUi Protocol
+  - name: Rd Worker Protocol
     schemes:
       - aionui
 
@@ -175,7 +175,7 @@ linux:
   description: ${description}
   desktop:
     entry:
-      Name: AionUi
+      Name: Rd Worker
       Comment: ${description}
       Icon: AionUi
       Categories: Office;Utility;

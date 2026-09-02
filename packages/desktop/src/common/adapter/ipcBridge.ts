@@ -1816,6 +1816,8 @@ export interface ICreateConversationParams {
   id?: string;
   name?: string;
   model?: TProviderWithModel;
+  /** Owning project. Null explicitly represents a global conversation. */
+  project_id?: string | null;
   assistant?: {
     id: string;
     locale?: string;

@@ -11,7 +11,6 @@ import { AionSearchInput } from '@/renderer/components/base';
 import { formatDateTime } from '@/renderer/services/i18n/format';
 import { usePresetAssistantInfo } from '@/renderer/hooks/agent/usePresetAssistantInfo';
 import { useAgentLogos } from '@/renderer/utils/model/agentLogo';
-import ThemedLogo from '@/renderer/components/agent/ThemedLogo';
 import { resolveConversationLeadingMark } from '@/renderer/pages/conversation/utils/conversationAssistantIdentity';
 import { blockMobileInputFocus, blurActiveElement } from '@/renderer/utils/ui/focus';
 import { isPrimaryApplicationShortcut } from '@/renderer/utils/ui/keyboardShortcuts';
@@ -114,14 +113,8 @@ const ConversationAgentMark: React.FC<{ conversation: IMessageSearchItem['conver
     );
   }
   if (leadingMark.kind === 'image') {
-    return (
-      <ThemedLogo
-        src={leadingMark.value}
-        alt={leadingMark.label}
-        title={leadingMark.label}
-        className='w-18px h-18px rounded-50% flex-shrink-0'
-      />
-    );
+    // 去掉会话前的 logo 图片,统一使用简洁消息图标(公司改造定制)
+    return <MessageOne theme='outline' size='18' className='line-height-0 flex-shrink-0 text-t-secondary' />;
   }
   if (leadingMark.kind === 'assistant_fallback') {
     return <Robot theme='outline' size='18' className='line-height-0 flex-shrink-0 text-t-secondary' />;

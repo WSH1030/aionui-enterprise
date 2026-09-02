@@ -9,7 +9,7 @@ import { Avatar, Button, Switch, Tag, Tooltip, Typography } from '@arco-design/w
 import { Delete, EditTwo, Robot } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import type { Assistant } from '@/common/types/agent/assistantTypes';
-import { resolveAgentAvatar, useAgentLogos } from '@/renderer/utils/model/agentLogo';
+import { resolveAgentAvatar, resolveAgentDisplayName, useAgentLogos } from '@/renderer/utils/model/agentLogo';
 import ThemedLogo from '@/renderer/components/agent/ThemedLogo';
 import {
   type AgentManagementStatus,
@@ -110,6 +110,7 @@ const AgentCard: React.FC<AgentCardProps> = (props) => {
   const isDisabled = isCustom && agent.enabled === false;
   const diagnostics = formatManagedAgentDiagnosticMessage(t, agent);
   const displayStatus = resolveDisplayStatus(agent.status, agent.last_check_error_code);
+  const displayName = resolveAgentDisplayName({ backend: agent.backend || agent.agent_type, agentName: agent.name });
 
   const avatar = resolveAgentAvatar(logos, {
     icon: agent.avatar || agent.icon,
@@ -135,7 +136,7 @@ const AgentCard: React.FC<AgentCardProps> = (props) => {
           {avatar.kind === 'image' ? (
             <ThemedLogo
               src={avatar.value}
-              alt={agent.name}
+              alt={displayName}
               // Arco Avatar forces color:var(--color-white); pin to theme text so
               // the currentColor mask stays visible in light mode too.
               style={{ width: 32, height: 32, objectFit: 'contain', color: 'var(--text-primary)' }}
@@ -148,7 +149,7 @@ const AgentCard: React.FC<AgentCardProps> = (props) => {
         </Avatar>
         <div className='min-w-0 flex-1'>
           <div className='flex min-w-0 items-center gap-8px'>
-            <Typography.Text className='truncate text-14px font-medium text-t-primary'>{agent.name}</Typography.Text>
+            <Typography.Text className='truncate text-14px font-medium text-t-primary'>{displayName}</Typography.Text>
             <Tag
               data-testid={`agent-row-status-${agent.id}`}
               size='small'

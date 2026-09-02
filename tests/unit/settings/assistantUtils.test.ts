@@ -14,6 +14,7 @@ import {
   resolveAssistantSourceTag,
   buildAssistantEditorBackends,
   filterAssistantEditorBackends,
+  resolveAssistantDisplayName,
 } from '@/renderer/pages/settings/AssistantSettings/assistantUtils';
 import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';
 import type { AssistantListItem } from '@/renderer/pages/settings/AssistantSettings/types';
@@ -243,6 +244,21 @@ describe('resolveAssistantSourceTag', () => {
   });
 });
 
+describe('resolveAssistantDisplayName', () => {
+  it('shows the Rd CLI brand for the generated Aion CLI assistant', () => {
+    expect(
+      resolveAssistantDisplayName(
+        mockAssistant({
+          name: 'Aion CLI',
+          source: 'generated',
+          agent: { type: 'aionrs', source: 'internal', acp_backend: 'aionrs' },
+        }),
+        'en-US'
+      )
+    ).toBe('Rd CLI');
+  });
+});
+
 describe('buildAssistantEditorBackends', () => {
   const agent = (over: Partial<ManagedAgent>): ManagedAgent =>
     ({
@@ -276,6 +292,7 @@ describe('buildAssistantEditorBackends', () => {
     const antigravity = backends.find((b) => b.id === 'a9f3c21e');
     expect(antigravity?.name).toBe('Antigravity');
     expect(antigravity?.runtimeKey).toBe('antigravity');
+    expect(backends.find((b) => b.id === 'aionrs-1')?.name).toBe('Rd CLI');
   });
 
   /**

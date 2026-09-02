@@ -8,6 +8,9 @@
  * AionUI应用程序共用常量
  */
 
+/** Display name used by the development UI. */
+export const APP_NAME = 'Rd Worker';
+
 // ===== 应用内浏览器 / In-app browser =====
 
 /**

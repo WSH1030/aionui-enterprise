@@ -143,6 +143,17 @@ describe('apiModelMapper', () => {
       expect(body.model).toEqual({ provider_id: 'openai', model: 'gemini-2.5-pro' });
     });
 
+    it('preserves the explicit project id on project conversation creates', () => {
+      const body = buildCreateConversationBody({
+        name: 'project chat',
+        assistant: { id: 'bare:aionrs' },
+        project_id: 'project-1',
+        extra: { workspace: 'D:/work/project-1' },
+      });
+
+      expect(body.project_id).toBe('project-1');
+    });
+
     it('omits type for assistant-first ACP creates', () => {
       const body = buildCreateConversationBody({
         name: 'hello',

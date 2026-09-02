@@ -40,6 +40,7 @@ vi.stubGlobal(
 );
 
 import TeammateMessageAvatar from '@/renderer/pages/conversation/Messages/components/TeammateMessageAvatar';
+import { resolveAgentLogo } from '@/renderer/utils/model/agentLogo';
 
 describe('TeammateMessageAvatar', () => {
   it('renders preset assistant logo as ThemedLogo image when isEmoji is false', async () => {
@@ -76,5 +77,21 @@ describe('TeammateMessageAvatar', () => {
 
     render(<TeammateMessageAvatar senderName='Writer' senderConversationId='conv-2' />);
     expect(screen.getByText('✍️')).toBeInTheDocument();
+  });
+
+  it('uses the rounded-square shape for the Rd Worker backend logo', async () => {
+    useSWRMock.mockReturnValue({ data: undefined });
+    usePresetAssistantInfoMock.mockReturnValue({ info: null });
+    const rdLogo = resolveAgentLogo({}, { backend: 'aionrs' });
+
+    const { container } = render(
+      <TeammateMessageAvatar senderName='Rd CLI' backendLogo={rdLogo} senderConversationId={undefined} />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(container.querySelector('img')).toHaveStyle({ borderRadius: '20%' });
   });
 });

@@ -1,5 +1,7 @@
+import { assistantRuntimeKey } from '@/common/types/agent/assistantTypes';
 import { resolveExtensionAssetUrl } from '@/renderer/utils/platform';
 import { isBackendRelativeAssetPath, isLikelyLocalFilePath } from '@/renderer/utils/model/assistantAvatar';
+import { resolveAgentDisplayName } from '@/renderer/utils/model/agentLogo';
 import type { AssistantListItem, AvailableBackend } from './types';
 import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';
 
@@ -19,6 +21,13 @@ export const resolveAssistantSourceTag = (source: string): AssistantSourceTag =>
   if (source === 'generated') return 'cli';
   return 'custom';
 };
+
+/** Resolve an assistant's user-facing name without changing its runtime identity. */
+export const resolveAssistantDisplayName = (assistant: AssistantListItem, localeKey: string): string =>
+  resolveAgentDisplayName({
+    backend: assistantRuntimeKey(assistant),
+    agentName: assistant.name_i18n?.[localeKey] || assistant.name,
+  });
 
 /**
  * Check if a string is an emoji (simple check for common emoji patterns).
@@ -85,6 +94,7 @@ export const filterAssistants = (
   return assistants.filter((assistant) => {
     if (normalizedQuery) {
       const searchableText = [
+        resolveAssistantDisplayName(assistant, localeKey),
         assistant.name_i18n?.[localeKey] || assistant.name,
         assistant.description_i18n?.[localeKey] || assistant.description || '',
       ]
@@ -217,7 +227,10 @@ export const buildAssistantEditorBackends = (
 
     backendMap.set(agentId, {
       id: agentId,
-      name: agent.name_i18n?.[localeKey] || agent.name,
+      name: resolveAgentDisplayName({
+        backend: runtimeKey,
+        agentName: agent.name_i18n?.[localeKey] || agent.name,
+      }),
       runtimeKey,
       isExtension: agent.isExtension,
       // Prefer the agent's own avatar/icon; the dropdown falls back to the logo

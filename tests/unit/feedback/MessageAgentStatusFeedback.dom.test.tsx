@@ -92,4 +92,25 @@ describe('MessageAgentStatus — FeedbackButton wiring', () => {
     expect(screen.getByText('Codex')).toBeInTheDocument();
     expect(screen.getByText('acp.status.connected:Codex')).toBeInTheDocument();
   });
+
+  it('uses the Rd CLI display brand for historical Aion CLI status messages', () => {
+    render(
+      <MessageAgentStatus
+        message={
+          {
+            id: 'm3',
+            type: 'agent_status',
+            content: {
+              backend: 'aionrs',
+              agent_name: 'Aion CLI',
+              status: 'connected',
+            },
+          } as IMessageAgentStatus
+        }
+      />
+    );
+
+    expect(screen.getByText('Rd CLI')).toBeInTheDocument();
+    expect(screen.queryByText('Aion CLI')).not.toBeInTheDocument();
+  });
 });

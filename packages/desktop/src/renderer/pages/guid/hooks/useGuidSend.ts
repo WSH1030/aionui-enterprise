@@ -25,6 +25,7 @@ export type GuidSendDeps = {
   setFiles: React.Dispatch<React.SetStateAction<ChatFileRef[]>>;
   dir: string;
   setDir: React.Dispatch<React.SetStateAction<string>>;
+  projectId: string | null;
   setLoading: React.Dispatch<React.SetStateAction<boolean>>;
   loading: boolean;
 
@@ -74,6 +75,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
     setFiles,
     dir,
     setDir,
+    projectId,
     setLoading,
     loading,
     selectedAssistantId,
@@ -179,6 +181,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
         const conversation = await ipcBridge.conversation.create.invoke({
           name: input,
           model: current_model,
+          project_id: projectId,
           assistant: {
             id: assistantConversationId,
             locale: localeKey,
@@ -233,6 +236,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
     try {
       const conversation = await ipcBridge.conversation.create.invoke({
         name: input,
+        project_id: projectId,
         assistant: {
           id: assistantConversationId,
           locale: localeKey,
@@ -285,6 +289,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
     input,
     files,
     dir,
+    projectId,
     selectedAssistantId,
     selectedAssistantBackend,
     selectedMode,

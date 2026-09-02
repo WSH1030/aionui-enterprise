@@ -391,7 +391,7 @@
   "deleteInvalidKeys": "删除无效密钥",
   "testAllKeys": "测试所有密钥",
   "addModelPlaceholder": "请选择或输入模型ID",
-  "customModelSupportNote": "说明：目前仅 Aion CLI 支持使用自定义模型。",
+  "customModelSupportNote": "说明：目前仅 Rd CLI 支持使用自定义模型。",
   "addModelHint": "选择或输入模型 ID，它会追加到当前平台配置。",
   "addModelSelectedHint": "即将添加模型：{{model}}",
   "currentModelsLabel": "当前模型",
@@ -465,7 +465,7 @@
   "skills": "技能",
   "tools": "工具",
   "toolsDescription": "配置 MCP 服务器与内置工具（如图像生成）。图像生成需先在“模型”页配置支持图像的模型后才能启用。",
-  "modelDescription": "配置大模型服务商与 API Key，供所有助手使用。目前仅 Aion CLI 支持自定义模型，其它 Agent 使用各自内置的模型。",
+  "modelDescription": "配置大模型服务商与 API Key，供所有助手使用。目前仅 Rd CLI 支持自定义模型，其它 Agent 使用各自内置的模型。",
   "capabilities": "能力扩展",
   "capabilitiesTab": {
     "skills": "技能",
@@ -1168,7 +1168,7 @@
   "agentManagement": {
     "localAgents": "本地 Agents",
     "remoteAgents": "远端 Agents",
-    "localAgentsDescription": "管理本机可用的 AI 编程 Agent。Aion CLI 为内置，App 自带、无需安装；其它 Agent 需先在本地安装对应 CLI 才能被识别。",
+    "localAgentsDescription": "管理本机可用的 AI 编程 Agent。Rd CLI 为内置，App 自带、无需安装；其它 Agent 需先在本地安装对应 CLI 才能被识别。",
     "localAgentsSetupLink": "查看安装指南",
     "goToChat": "开始对话",
     "remoteAgentsDescription": "目前只支持远程连接 OpenClaw，其他 Agent 正在开发中。",
@@ -1212,6 +1212,10 @@
     "customAgents": "自定义 Agents",
     "custom": "自定义",
     "addCustomAgent": "添加自定义 Agent",
+    "configureLocalOllamaQwen": "配置本机 Ollama Qwen",
+    "localOllamaQwenName": "Codex CLI（Ollama / Qwen）",
+    "localOllamaQwenConfigured": "本机 Ollama Qwen 已配置，并已设为新对话默认 Agent。",
+    "localOllamaAssistantNotFound": "配置已保存，但暂未找到对应助手。请刷新后再试。",
     "customEmpty": "暂无自定义 Agent",
     "customEmptyDescription": "自定义 Agent 需要支持 ACP 协议。",
     "errorCodes": {

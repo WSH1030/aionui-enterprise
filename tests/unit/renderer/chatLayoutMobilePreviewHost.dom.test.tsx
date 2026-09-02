@@ -15,13 +15,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // non-project conversations already render.
 
 let mockIsMobile = false;
+let mockRightSiderCollapsed = true;
+let mockPreviewOpen = true;
 
 vi.mock('@/renderer/hooks/context/LayoutContext', () => ({
   useLayoutContext: () => ({ isMobile: mockIsMobile }),
 }));
 
 vi.mock('@/renderer/pages/conversation/Preview', () => ({
-  usePreviewContext: () => ({ isOpen: true }),
+  usePreviewContext: () => ({ isOpen: mockPreviewOpen }),
   PreviewPanel: () => <div data-testid='preview-panel'>preview</div>,
 }));
 
@@ -34,7 +36,11 @@ vi.mock('@/renderer/pages/conversation/components/ChatLayout/WorkspacePanelHeade
 }));
 
 vi.mock('@/renderer/pages/conversation/components/ChatTitleEditor', () => ({
-  default: () => <div>title</div>,
+  default: ({ leading }: { leading?: React.ReactNode }) => (
+    <div data-testid='chat-title-editor' data-has-leading={leading ? 'true' : 'false'}>
+      title
+    </div>
+  ),
 }));
 
 vi.mock('@/renderer/components/agent/AgentBadge', () => ({
@@ -74,14 +80,19 @@ vi.mock('@/renderer/pages/conversation/hooks/useTitleRename', () => ({
 }));
 
 vi.mock('@/renderer/pages/conversation/hooks/useWorkspaceCollapse', () => ({
-  useWorkspaceCollapse: () => ({ rightSiderCollapsed: true, setRightSiderCollapsed: vi.fn() }),
+  useWorkspaceCollapse: () => ({ rightSiderCollapsed: mockRightSiderCollapsed, setRightSiderCollapsed: vi.fn() }),
 }));
 
 import ChatLayout from '@/renderer/pages/conversation/components/ChatLayout';
 
-function renderChatLayout(previewHosted: boolean) {
+function renderChatLayout(previewHosted: boolean, backend?: string, workspaceEnabled = false) {
   return render(
-    <ChatLayout previewHosted={previewHosted} sider={<div>sider</div>} workspaceEnabled={false}>
+    <ChatLayout
+      previewHosted={previewHosted}
+      backend={backend}
+      sider={<div>sider</div>}
+      workspaceEnabled={workspaceEnabled}
+    >
       <div>chat body</div>
     </ChatLayout>
   );
@@ -90,6 +101,8 @@ function renderChatLayout(previewHosted: boolean) {
 describe('ChatLayout mobile preview host fallback', () => {
   afterEach(() => {
     mockIsMobile = false;
+    mockRightSiderCollapsed = true;
+    mockPreviewOpen = true;
   });
 
   it('renders the preview overlay on mobile even for hoisted (project) conversations', () => {
@@ -97,6 +110,13 @@ describe('ChatLayout mobile preview host fallback', () => {
     renderChatLayout(true);
     // The regression target: preview must render inside ChatLayout on mobile.
     expect(screen.getByTestId('preview-panel')).toBeInTheDocument();
+  });
+
+  it('does not show an agent icon beside the desktop conversation title', () => {
+    mockIsMobile = false;
+    renderChatLayout(false, 'aionrs');
+
+    expect(screen.getByTestId('chat-title-editor')).toHaveAttribute('data-has-leading', 'false');
   });
 
   it('yields the preview to the Layout host on desktop for hoisted conversations (no double render)', () => {
@@ -110,5 +130,38 @@ describe('ChatLayout mobile preview host fallback', () => {
     mockIsMobile = false;
     renderChatLayout(false);
     expect(screen.getByTestId('preview-panel')).toBeInTheDocument();
+  });
+
+  it('keeps the desktop workspace column mounted while it is collapsed', () => {
+    mockIsMobile = false;
+    mockRightSiderCollapsed = true;
+
+    const { container } = renderChatLayout(false, undefined, true);
+    const workspace = container.querySelector('.chat-layout-right-sider');
+
+    expect(workspace).toHaveClass('layout-panel-column');
+    expect(workspace).toHaveStyle({ width: '0px', flexBasis: '0px' });
+    expect(workspace).toHaveTextContent('sider');
+  });
+
+  it('keeps a local preview mounted when it is closed for a smooth re-open', () => {
+    mockIsMobile = false;
+    mockPreviewOpen = true;
+
+    const view = renderChatLayout(false);
+    const preview = screen.getByTestId('preview-panel');
+    const previewColumn = preview.closest('.preview-panel');
+
+    expect(previewColumn).toHaveClass('layout-panel-column');
+
+    mockPreviewOpen = false;
+    view.rerender(
+      <ChatLayout previewHosted={false} sider={<div>sider</div>} workspaceEnabled={false}>
+        <div>chat body</div>
+      </ChatLayout>
+    );
+
+    expect(screen.getByTestId('preview-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('preview-panel').closest('.preview-panel')).toHaveClass('layout-panel-column--closed');
   });
 });

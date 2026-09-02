@@ -5,6 +5,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { configService } from '@/common/config/configService';
 import { parseError } from '@/common/utils';
 import {
   formatManagedAgentDiagnosticMessage,
@@ -31,6 +32,11 @@ import {
   getAgentAvailabilityFilterStats,
   type AgentAvailabilityFilter,
 } from './agentFilters';
+import {
+  CODEX_OLLAMA_CUSTOM_AGENT,
+  findAssistantForCodexOllamaAgent,
+  isCodexOllamaAgent,
+} from './codexOllamaPreset';
 
 const LOCAL_AGENT_SETUP_GUIDE_URL = 'https://github.com/iOfficeAI/AionUi/wiki/ACP-Setup';
 
@@ -60,6 +66,7 @@ const LocalAgents: React.FC = () => {
 
   const [editorVisible, setEditorVisible] = useState(false);
   const [editingAgent, setEditingAgent] = useState<ManagedAgent | null>(null);
+  const [configuringLocalOllamaQwen, setConfiguringLocalOllamaQwen] = useState(false);
 
   const handleSaveCustomAgent = useCallback(
     async (draft: CustomAgentDraft) => {
@@ -113,6 +120,43 @@ const LocalAgents: React.FC = () => {
     },
     [refreshCatalog]
   );
+
+  const handleConfigureLocalOllamaQwen = useCallback(async () => {
+    setConfiguringLocalOllamaQwen(true);
+    try {
+      const existingAgent = allAgents.find(isCodexOllamaAgent);
+      const agent =
+        existingAgent ??
+        (await ipcBridge.acpConversation.createCustomAgent.invoke({
+          name: t('settings.agentManagement.localOllamaQwenName', {
+            defaultValue: CODEX_OLLAMA_CUSTOM_AGENT.name,
+          }),
+          command: CODEX_OLLAMA_CUSTOM_AGENT.command,
+          args: [...CODEX_OLLAMA_CUSTOM_AGENT.args],
+          env: CODEX_OLLAMA_CUSTOM_AGENT.env.map(({ name, value }) => ({ name, value })),
+        }));
+
+      if (agent.enabled === false) {
+        await ipcBridge.acpConversation.setAgentEnabled.invoke({ id: agent.id, enabled: true });
+      }
+
+      await refreshCatalog();
+      const assistantList = await ipcBridge.assistants.list.invoke();
+      const assistant = findAssistantForCodexOllamaAgent(assistantList, agent.id);
+      if (!assistant) {
+        Message.warning(t('settings.agentManagement.localOllamaAssistantNotFound'));
+        return;
+      }
+
+      await configService.set('guid.lastAssistantId', assistant.id);
+      Message.success(t('settings.agentManagement.localOllamaQwenConfigured'));
+    } catch (error) {
+      console.error('Failed to configure local Ollama Qwen:', error);
+      Message.error(parseError(error));
+    } finally {
+      setConfiguringLocalOllamaQwen(false);
+    }
+  }, [allAgents, refreshCatalog, t]);
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const matchesAgentSearch = useCallback(
@@ -241,6 +285,16 @@ const LocalAgents: React.FC = () => {
               })}
               data-testid='btn-add-custom-agent'
             />
+            <Button
+              type='outline'
+              size='small'
+              loading={configuringLocalOllamaQwen}
+              disabled={configuringLocalOllamaQwen}
+              onClick={() => void handleConfigureLocalOllamaQwen()}
+              data-testid='btn-configure-local-ollama-qwen'
+            >
+              {t('settings.agentManagement.configureLocalOllamaQwen')}
+            </Button>
           </>
         }
         tabs={[

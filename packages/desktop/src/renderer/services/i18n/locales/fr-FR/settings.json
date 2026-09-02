@@ -391,7 +391,7 @@
   "deleteInvalidKeys": "Supprimer les clés invalides",
   "testAllKeys": "Tester toutes les clés",
   "addModelPlaceholder": "Sélectionner ou entrer l'ID du modèle",
-  "customModelSupportNote": "Note : Aion CLI et Gemini CLI Agent supportent actuellement les modèles personnalisés.",
+  "customModelSupportNote": "Note : Rd CLI et Gemini CLI Agent supportent actuellement les modèles personnalisés.",
   "addModelHint": "Choisissez ou tapez un ID de modèle et il sera ajouté à ce fournisseur.",
   "addModelSelectedHint": "Prêt à ajouter le modèle : {{model}}",
   "currentModelsLabel": "Modèles actuels",
@@ -465,7 +465,7 @@
   "skills": "Compétences",
   "tools": "Outils",
   "toolsDescription": "Configurez les serveurs MCP et les outils intégrés comme la génération d'images. La génération d'images doit être activée après avoir configuré un modèle compatible avec les images sur la page Modèle.",
-  "modelDescription": "Configurez les fournisseurs LLM et les clés API à utiliser dans tous les assistants. Seule Aion CLI prend en charge les modèles personnalisés ; d'autres agents utilisent leurs propres modèles intégrés.",
+  "modelDescription": "Configurez les fournisseurs LLM et les clés API à utiliser dans tous les assistants. Seule Rd CLI prend en charge les modèles personnalisés ; d'autres agents utilisent leurs propres modèles intégrés.",
   "capabilities": "Capacités",
   "capabilitiesTab": {
     "skills": "Compétences",
@@ -1209,6 +1209,10 @@
     "customAgents": "Agents personnalisés",
     "custom": "Personnalisé",
     "addCustomAgent": "Ajouter un agent personnalisé",
+    "configureLocalOllamaQwen": "Configurer Ollama Qwen local",
+    "localOllamaQwenName": "Codex CLI (Ollama / Qwen)",
+    "localOllamaQwenConfigured": "Ollama Qwen local est configuré et défini comme agent par défaut pour les nouvelles conversations.",
+    "localOllamaAssistantNotFound": "La configuration a été enregistrée, mais l’assistant correspondant est introuvable pour le moment. Actualisez puis réessayez.",
     "customEmpty": "Aucun agent personnalisé configuré. Cliquez sur \"Ajouter un agent personnalisé\" pour en créer un.",
     "customEmptyDescription": "Les agents personnalisés doivent prendre en charge ACP.",
     "errorCodes": {

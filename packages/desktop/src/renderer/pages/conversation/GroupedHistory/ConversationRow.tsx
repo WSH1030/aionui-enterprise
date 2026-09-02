@@ -5,7 +5,6 @@
  */
 
 import { useAgentLogos } from '@/renderer/utils/model/agentLogo';
-import ThemedLogo from '@/renderer/components/agent/ThemedLogo';
 import FlexFullContainer from '@/renderer/components/layout/FlexFullContainer';
 import { usePresetAssistantInfo } from '@/renderer/hooks/agent/usePresetAssistantInfo';
 import { CronJobIndicator } from '@/renderer/pages/cron';
@@ -85,11 +84,14 @@ const ConversationRow: React.FC<ConversationRowProps> = (props) => {
       );
     }
     if (leadingMark.kind === 'image') {
+      // 去掉会话前的 logo 图片,统一使用简洁消息图标(公司改造定制)
+      // Drop the assistant/backend logo image; use the same plain message icon
+      // as the fallback for a cleaner sidebar (company customization).
       return (
-        <ThemedLogo
-          src={leadingMark.value}
-          alt={leadingMark.label}
-          className={classNames('w-16px h-16px rounded-50% flex-shrink-0', composedClass)}
+        <MessageOne
+          theme='outline'
+          size='16'
+          className={classNames('line-height-0 flex-shrink-0 text-t-secondary', composedClass)}
         />
       );
     }

@@ -461,8 +461,8 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
   let devIcon: Electron.NativeImage | undefined;
   if (!app.isPackaged) {
     try {
-      // Windows: app.ico (no dev version), Linux: app_dev.png (with padding)
-      const iconFile = process.platform === 'win32' ? 'app.ico' : 'app_dev.png';
+      // Use the shared PNG during development so the live desktop window and renderer use the same brand asset.
+      const iconFile = 'app_dev.png';
       const iconPath = path.join(process.cwd(), 'resources', iconFile);
       if (fs.existsSync(iconPath)) {
         devIcon = nativeImage.createFromPath(iconPath);

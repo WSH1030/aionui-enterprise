@@ -14,6 +14,7 @@ import { useManagedAgentRuntimeCatalog } from '@/renderer/hooks/agent/useManaged
 import { managedAgentSearchText } from '@/renderer/utils/model/agentTypes';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { resolveAssistantAvatar } from '@/renderer/utils/model/assistantAvatar';
+import { RD_CLI_DISPLAY_NAME, resolveAgentAvatar, resolveAgentDisplayName } from '@/renderer/utils/model/agentLogo';
 import ThemedLogo from '@/renderer/components/agent/ThemedLogo';
 import { selectableAssistants } from '@/renderer/utils/model/assistantSelection';
 import { useTranslation } from 'react-i18next';
@@ -222,9 +223,14 @@ const AssistantSelectionArea: React.FC<AssistantSelectionAreaProps> = ({
   if (enabledAssistants.length === 0) return null;
 
   const renderAssistantPill = (assistant: Assistant, testId: string, fullWidth = false) => {
-    const avatar = resolveAssistantAvatar(assistant.avatar);
+    const runtimeKey = assistantRuntimeKey(assistant);
+    const label = resolveAgentDisplayName({
+      backend: runtimeKey,
+      agentName: assistant.name_i18n?.[localeKey] || assistant.name,
+    });
+    const isRdBrand = label === RD_CLI_DISPLAY_NAME;
+    const avatar = isRdBrand ? resolveAgentAvatar({}, { backend: 'aionrs' }) : resolveAssistantAvatar(assistant.avatar);
     const isSelected = selectedId === assistant.id;
-    const label = assistant.name_i18n?.[localeKey] || assistant.name;
 
     return (
       <Button
@@ -247,7 +253,12 @@ const AssistantSelectionArea: React.FC<AssistantSelectionAreaProps> = ({
           setMoreVisible(false);
         }}
       >
-        <span className='inline-flex h-20px w-20px items-center justify-center overflow-hidden rounded-999px bg-fill-2'>
+        <span
+          className={`inline-flex h-20px w-20px items-center justify-center overflow-hidden bg-fill-2 ${
+            isRdBrand ? '' : 'rounded-999px'
+          }`}
+          style={isRdBrand ? { borderRadius: '20%' } : undefined}
+        >
           {avatar.kind === 'image' ? (
             <ThemedLogo src={avatar.value} alt='' className='object-contain' style={{ width: 20, height: 20 }} />
           ) : avatar.kind === 'emoji' ? (

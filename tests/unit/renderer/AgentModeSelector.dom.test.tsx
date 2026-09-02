@@ -339,4 +339,11 @@ describe('AgentModeSelector', () => {
       'Run without permission prompts'
     );
   });
+
+  it('shows the Rd CLI brand instead of the built-in Aion CLI name', () => {
+    render(<AgentModeSelector backend='aionrs' agent_name='Aion CLI' compact compactLabelType='agent' />);
+
+    expect(screen.getByText('Rd CLI')).toBeInTheDocument();
+    expect(screen.queryByText('Aion CLI')).not.toBeInTheDocument();
+  });
 });

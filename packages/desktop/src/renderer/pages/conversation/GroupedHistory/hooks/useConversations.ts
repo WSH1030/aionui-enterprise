@@ -8,6 +8,7 @@ import type { TChatConversation } from '@/common/config/storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useConversationHistoryContext } from '@/renderer/hooks/context/ConversationHistoryContext';
+import type { BackendProjectSidebarEntry } from '../utils/groupingHelpers';
 import type { TimelineSection } from '../types';
 import {
   dispatchWorkspaceExpansionChange,
@@ -17,6 +18,7 @@ import {
 
 // Persist section collapsed state across reloads.
 const COLLAPSED_SECTIONS_KEY = 'grouped-history-collapsed-sections';
+const EMPTY_PROJECTS: BackendProjectSidebarEntry[] = [];
 
 const readCollapsedSections = (): Set<string> => {
   try {
@@ -31,14 +33,23 @@ const readCollapsedSections = (): Set<string> => {
 
 // Where an active conversation lives, so we can expand the right containers
 // before scrolling it into view.
-type ConversationLocation = { section: 'pinned' | 'recents' };
+type ConversationLocation = {
+  section: 'pinned' | 'projects' | 'recents';
+  projectKey?: string;
+};
 
 const locateConversation = (
   id: string,
   pinned: TChatConversation[],
-  sections: TimelineSection[]
+  sections: TimelineSection[],
+  projects: BackendProjectSidebarEntry[]
 ): ConversationLocation | null => {
   if (pinned.some((c) => c.id === id)) return { section: 'pinned' };
+  for (const project of projects) {
+    if (project.conversations.some((conversation) => conversation.id === id)) {
+      return { section: 'projects', projectKey: project.key };
+    }
+  }
   for (const section of sections) {
     for (const item of section.items) {
       if (item.type === 'workspace' && item.workspaceGroup) {
@@ -53,7 +64,8 @@ const locateConversation = (
   return null;
 };
 
-export const useConversations = () => {
+export const useConversations = (projects?: BackendProjectSidebarEntry[]) => {
+  const visibleProjects = projects ?? EMPTY_PROJECTS;
   const [expandedWorkspaces, setExpandedWorkspaces] = useState<string[]>(() => readExpandedWorkspaces());
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => readCollapsedSections());
   const { id } = useParams();
@@ -107,7 +119,7 @@ export const useConversations = () => {
 
     if (revealedIdRef.current === id) return;
 
-    const location = locateConversation(id, pinnedConversations, timelineSections);
+    const location = locateConversation(id, pinnedConversations, timelineSections, visibleProjects);
     if (!location) return; // data not loaded yet; effect re-runs when it arrives
     revealedIdRef.current = id;
 
@@ -118,6 +130,14 @@ export const useConversations = () => {
       next.delete(location.section);
       return next;
     });
+    if (location.projectKey) {
+      const projectKey = location.projectKey;
+      const project = visibleProjects.find((item) => item.key === location.projectKey);
+      setExpandedWorkspaces((prev) => {
+        const next = project?.workspace ? prev.filter((key) => key !== project.workspace) : [...prev];
+        return next.includes(projectKey) ? next : [...next, projectKey];
+      });
+    }
     let cancelled = false;
     let outerRafId: number;
     let innerRafId: number;
@@ -135,7 +155,15 @@ export const useConversations = () => {
       cancelAnimationFrame(outerRafId);
       cancelAnimationFrame(innerRafId);
     };
-  }, [clearCompletionUnread, clearManualUnread, id, setActiveConversation, pinnedConversations, timelineSections]);
+  }, [
+    clearCompletionUnread,
+    clearManualUnread,
+    id,
+    visibleProjects,
+    setActiveConversation,
+    pinnedConversations,
+    timelineSections,
+  ]);
 
   // Persist workspace expansion state
   useEffect(() => {
@@ -172,11 +200,12 @@ export const useConversations = () => {
         }
       });
     });
-    if (allWorkspaces.length > 0) {
-      setExpandedWorkspaces(allWorkspaces);
+    const allExpansionKeys = [...new Set([...allWorkspaces, ...visibleProjects.map((project) => project.key)])];
+    if (allExpansionKeys.length > 0) {
+      setExpandedWorkspaces(allExpansionKeys);
       hasAutoExpandedRef.current = true;
     }
-  }, [timelineSections]);
+  }, [visibleProjects, timelineSections]);
 
   // Remove stale workspace entries that no longer exist in the data
   useEffect(() => {
@@ -188,12 +217,15 @@ export const useConversations = () => {
         }
       });
     });
+    visibleProjects.forEach((project) => {
+      currentWorkspaces.add(project.key);
+    });
     if (currentWorkspaces.size === 0) return;
     setExpandedWorkspaces((prev) => {
       const filtered = prev.filter((ws) => currentWorkspaces.has(ws));
       return filtered.length === prev.length ? prev : filtered;
     });
-  }, [timelineSections]);
+  }, [visibleProjects, timelineSections]);
 
   const handleToggleWorkspace = useCallback((workspace: string) => {
     setExpandedWorkspaces((prev) => {

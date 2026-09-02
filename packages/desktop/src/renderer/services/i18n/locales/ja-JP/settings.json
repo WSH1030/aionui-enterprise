@@ -391,7 +391,7 @@
   "deleteInvalidKeys": "無効なキーを削除",
   "testAllKeys": "すべてのキーをテスト",
   "addModelPlaceholder": "モデルIDを選択または入力してください",
-  "customModelSupportNote": "注: 現在カスタムモデルをサポートしているのは Aion CLI のみです。",
+  "customModelSupportNote": "注: 現在カスタムモデルをサポートしているのは Rd CLI のみです。",
   "addModelHint": "モデル ID を選択または入力すると、このプロバイダーの設定に追加されます。",
   "addModelSelectedHint": "追加予定のモデル: {{model}}",
   "currentModelsLabel": "現在のモデル",
@@ -465,7 +465,7 @@
   "skills": "スキル",
   "tools": "ツール",
   "toolsDescription": "MCP サーバーと画像生成などの組み込みツールを設定します。画像生成は、モデルページで画像対応モデルを設定した後にのみ有効化できます。",
-  "modelDescription": "すべてのアシスタントで使用する LLM プロバイダーと API キーを設定します。カスタムモデルに対応するのは Aion CLI のみで、他のエージェントは各自の組み込みモデルを使用します。",
+  "modelDescription": "すべてのアシスタントで使用する LLM プロバイダーと API キーを設定します。カスタムモデルに対応するのは Rd CLI のみで、他のエージェントは各自の組み込みモデルを使用します。",
   "capabilities": "能力拡張",
   "capabilitiesTab": {
     "skills": "スキル",
@@ -1157,7 +1157,7 @@
   "agentManagement": {
     "localAgents": "ローカルエージェント",
     "remoteAgents": "リモートエージェント",
-    "localAgentsDescription": "このデバイスで利用できる AI コーディングエージェントを管理します。Aion CLI は組み込みでアプリに同梱されており、インストール不要です。他のエージェントは対応する CLI をローカルにインストールした後にのみ検出されます。",
+    "localAgentsDescription": "このデバイスで利用できる AI コーディングエージェントを管理します。Rd CLI は組み込みでアプリに同梱されており、インストール不要です。他のエージェントは対応する CLI をローカルにインストールした後にのみ検出されます。",
     "localAgentsSetupLink": "セットアップガイド",
     "goToChat": "チャットを開始",
     "remoteAgentsDescription": "現在は OpenClaw のリモート接続のみ対応しています。その他のエージェントは開発中です。",
@@ -1199,6 +1199,10 @@
     "customAgents": "カスタムエージェント",
     "custom": "カスタム",
     "addCustomAgent": "カスタムエージェントを追加",
+    "configureLocalOllamaQwen": "ローカル Ollama Qwen を設定",
+    "localOllamaQwenName": "Codex CLI (Ollama / Qwen)",
+    "localOllamaQwenConfigured": "ローカル Ollama Qwen を設定し、新しい会話のデフォルト Agent にしました。",
+    "localOllamaAssistantNotFound": "設定は保存されましたが、対応するアシスタントがまだ見つかりません。更新して再試行してください。",
     "customEmpty": "カスタムエージェントがありません。",
     "customEmptyDescription": "カスタムエージェントは ACP に対応している必要があります。",
     "errorCodes": {

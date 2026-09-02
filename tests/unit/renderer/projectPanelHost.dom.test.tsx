@@ -36,8 +36,18 @@ describe('ProjectPanelHost (Layout-level host chrome)', () => {
     expect(col).not.toBeNull();
     expect(col.getAttribute('data-mount-id')).toBeTruthy();
     expect(col.getAttribute('data-collapsed')).toBe('false');
+    expect(col).toHaveClass('layout-panel-column');
     expect(col.style.width).toBe('280px');
+    expect(col.style.flexBasis).toBe('280px');
     expect(screen.getByTestId('explorer')).toHaveTextContent('proj-9');
+  });
+
+  it('renders a dedicated divider for the expanded explorer column', () => {
+    setCurrentProject('proj-9');
+    render(<ProjectPanelHost widthPx={280} collapsed={false} />);
+    const col = document.querySelector('[data-explorer-column]') as HTMLElement;
+
+    expect(col.querySelector('.project-panel-divider')).toBeInTheDocument();
   });
 
   it('collapses to width 0 but keeps the explorer mounted (no remount)', () => {
@@ -45,7 +55,9 @@ describe('ProjectPanelHost (Layout-level host chrome)', () => {
     render(<ProjectPanelHost widthPx={280} collapsed />);
     const col = document.querySelector('[data-explorer-column]') as HTMLElement;
     expect(col.getAttribute('data-collapsed')).toBe('true');
+    expect(col).toHaveClass('layout-panel-column', 'layout-panel-column--closed');
     expect(col.style.width).toBe('0px');
+    expect(col.style.flexBasis).toBe('0px');
     // Component stays mounted — collapse is width-only, not an unmount.
     expect(screen.getByTestId('explorer')).toHaveTextContent('proj-9');
   });

@@ -121,13 +121,8 @@ const ArchivedSettings: React.FC = () => {
         return <span className='text-16px leading-none flex-shrink-0'>{leadingMark.value}</span>;
       }
       if (leadingMark.kind === 'image') {
-        return (
-          <img
-            src={leadingMark.value}
-            alt={leadingMark.label}
-            className='block w-16px h-16px rounded-50% object-cover flex-shrink-0'
-          />
-        );
+        // 去掉会话前的 logo 图片,统一使用简洁消息图标(公司改造定制)
+        return <MessageOne theme='outline' size='16' className='block leading-none text-t-secondary' />;
       }
       if (leadingMark.kind === 'assistant_fallback') {
         return <Robot theme='outline' size='16' className='block leading-none text-t-secondary' />;

@@ -10,6 +10,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import ButlerDiagnoseButton from '@/renderer/components/base/ButlerDiagnoseButton';
 import FeedbackButton from '@/renderer/components/base/FeedbackButton';
+import { resolveAgentDisplayName } from '@/renderer/utils/model/agentLogo';
 
 const { Text } = Typography;
 
@@ -24,8 +25,10 @@ const MessageAgentStatus: React.FC<MessageAgentStatusProps> = ({ message }) => {
   const { t } = useTranslation();
   const { backend, status, agent_name } = message.content;
 
-  // Resolve display name: explicit agent_name > capitalized backend.
-  const display_name = agent_name || backend.charAt(0).toUpperCase() + backend.slice(1);
+  const display_name = resolveAgentDisplayName({
+    backend,
+    agentName: agent_name || backend.charAt(0).toUpperCase() + backend.slice(1),
+  });
 
   // Hide disconnected status from historical messages (no longer emitted but may exist in DB)
   if ((status as string) === 'disconnected') return null;

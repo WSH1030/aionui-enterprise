@@ -1,4 +1,3 @@
-import { AgentLogoIcon } from '@/renderer/components/agent/AgentBadge';
 import type { PresetAssistantInfo } from '@/renderer/hooks/agent/usePresetAssistantInfo';
 import FlexFullContainer from '@/renderer/components/layout/FlexFullContainer';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
@@ -10,6 +9,7 @@ import { useContainerWidth } from '@/renderer/pages/conversation/hooks/useContai
 import { useLayoutConstraints } from '@/renderer/pages/conversation/hooks/useLayoutConstraints';
 import { useTitleRename } from '@/renderer/pages/conversation/hooks/useTitleRename';
 import { useWorkspaceCollapse } from '@/renderer/pages/conversation/hooks/useWorkspaceCollapse';
+import { usePersistentPanelMount } from '@/renderer/hooks/ui/usePersistentPanelMount';
 import { PreviewPanel, usePreviewContext } from '@/renderer/pages/conversation/Preview';
 import { dispatchWorkspaceToggleEvent } from '@/renderer/utils/workspace/workspaceEvents';
 import classNames from 'classnames';
@@ -65,7 +65,7 @@ const ChatLayout: React.FC<{
   headerLeading?: React.ReactNode;
 }> = (props) => {
   const { conversation_id, workspacePath, isTemporaryWorkspace } = props;
-  const { backend, presetAssistant, agent_name, workspaceEnabled = true, workspacePreferenceKey } = props;
+  const { workspaceEnabled = true, workspacePreferenceKey } = props;
   const layout = useLayoutContext();
   const isDesktop = !layout?.isMobile;
   const isMobile = Boolean(layout?.isMobile);
@@ -83,6 +83,8 @@ const ChatLayout: React.FC<{
   // ChatLayout must behave as if there is no preview: chat fills, no split, no
   // preview panel. Everywhere below uses `isPreviewOpen` for that local decision.
   const isPreviewOpen = isPreviewOpenRaw && !previewHosted;
+  const { mounted: previewMounted, visible: previewVisible } = usePersistentPanelMount({ open: isPreviewOpen });
+  const previewLayoutOpen = isPreviewOpen && previewVisible;
   // 最大化（仅桌面）：隐藏聊天区、让内联预览铺满；工作区右栏保持不变。
   // 项目会话的预览被提升到 Layout host（previewHosted），其最大化在 Layout 处理，
   // 这里的 isPreviewOpen 已排除该情况。
@@ -90,7 +92,7 @@ const ChatLayout: React.FC<{
   // the right workspace sider stays unchanged. Project conversations hoist the
   // preview to the Layout host (previewHosted) and handle maximizing there —
   // isPreviewOpen already excludes that case here.
-  const previewMaximized = isDesktop && isPreviewOpen && isMaximized;
+  const previewMaximized = isDesktop && previewLayoutOpen && isMaximized;
 
   // --- Hook A: workspace collapse ---
   const { rightSiderCollapsed, setRightSiderCollapsed } = useWorkspaceCollapse({
@@ -111,11 +113,6 @@ const ChatLayout: React.FC<{
       conversation_id,
       onRename: props.onRenameTitle,
     });
-
-  const capitalizedBackend = backend ? backend.charAt(0).toUpperCase() + backend.slice(1) : backend;
-
-  // Compute display name with fallback chain
-  const display_name = presetAssistant?.name || agent_name || capitalizedBackend;
 
   const {
     splitRatio: workspaceWidthPxPref,
@@ -214,18 +211,6 @@ const ChatLayout: React.FC<{
           titleAreaMaxWidth={titleAreaMaxWidth}
           title={props.title}
           conversation_id={conversation_id}
-          leading={
-            props.headerLeading ??
-            ((backend || presetAssistant) && (
-              <AgentLogoIcon
-                backend={backend}
-                agent_name={display_name}
-                agentLogo={presetAssistant?.logo}
-                agentLogoIsEmoji={presetAssistant?.isEmoji}
-                agentLogoIsFallback={presetAssistant?.isFallback}
-              />
-            ))
-          }
         />
       </FlexFullContainer>
       <div className='flex items-center gap-12px shrink-0'>{props.headerExtra}</div>
@@ -264,13 +249,13 @@ const ChatLayout: React.FC<{
             <div
               className='flex flex-col relative'
               style={{
-                flexGrow: isPreviewOpen && isDesktop ? 0 : 1,
+                flexGrow: isDesktop ? 0 : 1,
                 flexShrink: 0,
-                flexBasis: isPreviewOpen && isDesktop ? `${chatFlex}%` : 0,
+                flexBasis: isDesktop ? `${previewLayoutOpen ? chatFlex : 100}%` : 0,
                 // 最大化时（桌面）隐藏聊天区，预览铺满；移动端预览打开即覆盖聊天区。
                 // Hidden when maximized (desktop) so the preview fills; on mobile an
                 // open preview already covers the chat.
-                display: (isPreviewOpen && isMobile) || previewMaximized ? 'none' : 'flex',
+                display: (previewLayoutOpen && isMobile) || previewMaximized ? 'none' : 'flex',
                 minWidth: '240px',
               }}
               onClick={() => {
@@ -281,11 +266,12 @@ const ChatLayout: React.FC<{
                 {props.children}
               </ArcoLayout.Content>
             </div>
-            {/* Preview panel - conditionally rendered */}
-            {isPreviewOpen && (
+            {/* Preview panel - mounted once, then collapsed through the shared layout transition */}
+            {previewMounted && (
               <div
                 className={classNames(
-                  'preview-panel flex flex-col relative overflow-visible',
+                  'preview-panel layout-panel-column flex flex-col relative overflow-visible',
+                  !previewLayoutOpen && 'layout-panel-column--closed',
                   // 移动端预览是覆盖层，保留内缩和圆角；桌面端不留边距，
                   // 否则窗口底色会从缝隙透出（深色模式下尤其突兀）。
                   // On mobile the preview is an overlay, so it keeps its inset and
@@ -294,15 +280,20 @@ const ChatLayout: React.FC<{
                   isDesktop ? '' : 'm-[8px] rounded-[15px]'
                 )}
                 style={{
-                  flexGrow: 1,
-                  flexShrink: 1,
-                  flexBasis: 0,
+                  flexGrow: previewMaximized ? 1 : 0,
+                  flexShrink: previewMaximized ? 1 : 0,
+                  flexBasis: previewMaximized
+                    ? 0
+                    : previewLayoutOpen && isDesktop
+                      ? `${Math.max(0, 100 - chatFlex)}%`
+                      : '0%',
+                  width: isMobile ? 'calc(100% - 16px)' : !previewLayoutOpen ? '0px' : undefined,
                   // 桌面端只用左边框分界；移动端覆盖层保留完整描边
                   // Desktop: left divider only. Mobile overlay keeps a full border.
-                  ...(isDesktop ? { borderLeft: '1px solid var(--bg-3)' } : { border: '1px solid var(--bg-3)' }),
-                  minWidth: isDesktop ? '260px' : 0,
+                  ...(isDesktop ? {} : { border: '1px solid var(--bg-3)' }),
+                  minWidth: previewLayoutOpen && isDesktop ? '260px' : 0,
                   maxWidth: isMobile ? 'calc(100% - 16px)' : undefined,
-                  width: isMobile ? 'calc(100% - 16px)' : undefined,
+                  display: !previewLayoutOpen && isMobile ? 'none' : undefined,
                   boxSizing: 'border-box',
                 }}
               >
@@ -327,7 +318,10 @@ const ChatLayout: React.FC<{
         </div>
         {workspaceEnabled && !layout?.isMobile && (
           <div
-            className={classNames('!bg-1 relative chat-layout-right-sider layout-sider')}
+            className={classNames(
+              '!bg-1 relative chat-layout-right-sider layout-sider layout-panel-column',
+              rightSiderCollapsed && 'layout-panel-column--closed'
+            )}
             style={{
               flexGrow: 0,
               flexShrink: 0,
@@ -335,11 +329,9 @@ const ChatLayout: React.FC<{
               width: rightSiderCollapsed ? '0px' : `${Math.round(workspaceWidthPx)}px`,
               minWidth: rightSiderCollapsed ? '0px' : `${MIN_WORKSPACE_PANEL_PX}px`,
               overflow: 'hidden',
-              borderLeft: rightSiderCollapsed ? 'none' : '1px solid var(--bg-3)',
             }}
           >
             {isDesktop &&
-              !rightSiderCollapsed &&
               createWorkspaceDragHandle({ className: 'absolute start-0 top-0 bottom-0', style: {}, reverse: true })}
             <WorkspacePanelHeader
               collapsed={rightSiderCollapsed}

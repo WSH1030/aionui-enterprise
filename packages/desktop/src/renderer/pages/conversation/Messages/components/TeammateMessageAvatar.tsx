@@ -10,6 +10,7 @@ import { usePresetAssistantInfo } from '@renderer/hooks/agent/usePresetAssistant
 import ThemedLogo from '@/renderer/components/agent/ThemedLogo';
 import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
 import { Robot } from '@icon-park/react';
+import { isRdBrandLogoSource } from '@/renderer/utils/model/agentLogo';
 
 type Props = {
   senderName: string;
@@ -53,7 +54,15 @@ const TeammateMessageAvatar: React.FC<Props> = ({ senderName, senderConversation
   }
 
   if (backendLogo) {
-    return <ThemedLogo src={backendLogo} alt={senderName} className='w-20px h-20px rounded-full object-contain' />;
+    const isRdBrand = isRdBrandLogoSource(backendLogo);
+    return (
+      <ThemedLogo
+        src={backendLogo}
+        alt={senderName}
+        className={`w-20px h-20px object-contain ${isRdBrand ? '' : 'rounded-full'}`}
+        style={isRdBrand ? { borderRadius: '20%' } : undefined}
+      />
+    );
   }
 
   return (

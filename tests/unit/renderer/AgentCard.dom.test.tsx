@@ -98,6 +98,22 @@ const renderOfficial = (
   );
 
 describe('AgentCard (official variant)', () => {
+  it('shows the Rd CLI brand for the built-in Aion CLI row', () => {
+    renderOfficial({
+      id: 'aionrs',
+      name: 'Aion CLI',
+      agent_type: 'aionrs',
+      agent_source: 'internal',
+      backend: 'aionrs',
+      enabled: true,
+      installed: true,
+      status: 'online',
+    });
+
+    expect(screen.getByText('Rd CLI')).toBeInTheDocument();
+    expect(screen.queryByText('Aion CLI')).not.toBeInTheDocument();
+  });
+
   it('shows status tag plus test-connection and edit actions for a missing official agent', () => {
     renderOfficial({
       id: 'claude',

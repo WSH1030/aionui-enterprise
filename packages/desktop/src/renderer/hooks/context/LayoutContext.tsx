@@ -8,6 +8,8 @@ import React from 'react';
 export interface LayoutContextValue {
   isMobile: boolean;
   siderCollapsed: boolean;
+  /** Render mode used by the history list; it stays stable while the sider animates. */
+  siderContentCollapsed?: boolean;
   setSiderCollapsed: (value: boolean) => void;
 }
 

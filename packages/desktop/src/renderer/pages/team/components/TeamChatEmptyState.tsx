@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import type { TChatConversation } from '@/common/config/storage';
 import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
 import { getSendBoxDraftHook } from '@renderer/hooks/chat/useSendBoxDraft';
-import { resolveAgentAvatar, useAgentLogos } from '@renderer/utils/model/agentLogo';
+import { resolveAgentAvatar, resolveAgentDisplayName, useAgentLogos } from '@renderer/utils/model/agentLogo';
 import ThemedLogo from '@/renderer/components/agent/ThemedLogo';
 import { usePresetAssistantInfo } from '@renderer/hooks/agent/usePresetAssistantInfo';
 import { resolveConversationBackend } from '@/renderer/pages/conversation/utils/conversationAssistantIdentity';
@@ -100,7 +100,10 @@ const TeamChatEmptyState: React.FC<Props> = ({
   if (!team_id) return null;
 
   const assistantBackend = resolveConversationBackend(conversation, assistant_backend || presetInfo?.backend) || 'acp';
-  const assistantName = resolveAssistantName(conversation, presetInfo?.name ?? null, assistant_name);
+  const assistantName = resolveAgentDisplayName({
+    backend: assistantBackend,
+    agentName: resolveAssistantName(conversation, presetInfo?.name ?? null, assistant_name),
+  });
   const agentAvatar = resolveAgentAvatar(logos, { icon, backend: assistantBackend });
 
   const renderAvatar = () => {
